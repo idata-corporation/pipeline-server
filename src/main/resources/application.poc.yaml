@@ -1,0 +1,28 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+  server:
+    tomcat:
+      connection-timeout: "600000"
+  management:
+    health:
+      probes:
+        enabled: "true"
+      livenessState:
+        enabled: "true"
+      readinessState:
+        enabled: "true"
+schedule:
+  checkFileNotifierQueue: "5000"
+  findJobsToStart: "5000"
+environment: idata-poc
+aws:
+  region: us-east-1
+  secretsManager:
+    apiKeysSecretName: idata-poc-apikey
+    snowflakeSecretName: idata-snowflakesecrets
+    redshiftSecretName: idata-redshiftsecrets
+  sns:
+    sendNotifications: "true"
