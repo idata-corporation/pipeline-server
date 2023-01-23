@@ -47,21 +47,3 @@ data "aws_iam_policy_document" "dataset_notification_policy" {
     sid = "__default_statement_ID"
   }
 }
-
-resource "aws_sns_topic_subscription" "notification" {
-  topic_arn = aws_sns_topic.dataset_notification.arn
-  protocol  = "sqs"
-  endpoint  = aws_sqs_queue.notification.arn
-  raw_message_delivery = true
-  delivery_policy = jsonencode({
-    healthyRetryPolicy = {
-        numRetries = 3
-        minDelayTarget = 20
-        maxDelayTarget= 20
-        numMinDelayRetries = 0
-        numMaxDelayRetries = 0
-        numNoDelayRetries = 0
-        backoffFunction = "linear"
-    }
-  })
-}
