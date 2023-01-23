@@ -1,19 +1,3 @@
-resource "aws_dynamodb_table" "config" {
-  name          = "${var.environment_name}-config"
-  billing_mode  = "PAY_PER_REQUEST"
-  hash_key      = "name"
-  table_class   = "STANDARD"
-
-  attribute {
-      name = "name"
-      type = "S"
-  }
-
-  tags = {
-    Name = var.environment_name
-  }
-}
-
 resource "aws_dynamodb_table" "dataset" {
   name         = "${var.environment_name}-dataset"
   billing_mode = "PAY_PER_REQUEST"
@@ -22,22 +6,6 @@ resource "aws_dynamodb_table" "dataset" {
 
   attribute {
     name = "name"
-    type = "S"
-  }
-
-  tags = {
-    Name = var.environment_name
-  }
-}
-
-resource "aws_dynamodb_table" "archived-data" {
-  name         = "${var.environment_name}-archived-data"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "pipeline_token"
-  table_class  = "STANDARD"
-
-  attribute {
-    name = "pipeline_token"
     type = "S"
   }
 
@@ -106,11 +74,16 @@ resource "aws_dynamodb_table" "dataset-status" {
   }
 }
 
-resource "aws_dynamodb_table" "sqs-message" {
-  name         = "${var.environment_name}-sqs-message"
+resource "aws_dynamodb_table" "file-notifier-message" {
+  name         = "${var.environment_name}-file-notifier-message"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "id"
   table_class  = "STANDARD"
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
 
   attribute {
     name = "id"

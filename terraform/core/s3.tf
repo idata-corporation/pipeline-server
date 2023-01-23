@@ -52,12 +52,3 @@ resource "aws_s3_bucket" "temp" {
     Name = var.environment_name
   }
 }
-
-## staging
-resource "aws_s3_bucket" "staging" {
-  bucket = "${var.environment_name}-staging"
-
-  tags = {
-    Name = var.environment_name
-  }
-}

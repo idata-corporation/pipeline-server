@@ -53,7 +53,6 @@ class RedshiftLoader(jobContext: JobContext) {
             throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager")
 
         Class.forName("com.amazon.redshift.jdbc42.Driver")
-        logger.info("Redshift driver loaded successfully")
         statusUtil.info("processing", "Redshift driver loaded successfully")
 
         var conn: Connection = null
@@ -127,7 +126,7 @@ class RedshiftLoader(jobContext: JobContext) {
             command.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + table +
                 " FROM '" + stageUrl + "'" +
                 " CREDENTIALS '" + "aws_iam_role=" + dbRole + "'" +
-                " FORMAT AS PARQUET'"
+                " FORMAT AS PARQUET"
             )
         }
         logger.info("Copy command: " + command.toString())

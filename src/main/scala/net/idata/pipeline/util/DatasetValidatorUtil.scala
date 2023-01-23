@@ -300,12 +300,13 @@ object DatasetValidatorUtil {
                 val (snowflake, redshift)  = {
                     val snowflake = {
                         if(config.destination.database.snowflake != null) {
-                            if(config.destination.database.snowflake.keyFields != null) {
-                                val fields = config.destination.database.snowflake.keyFields.asScala.map(_.toLowerCase).toList.asJava
-                                config.destination.database.snowflake.copy(keyFields = fields)
+                            val fields = {
+                                if(config.destination.database.snowflake.keyFields != null)
+                                    config.destination.database.snowflake.keyFields.asScala.map(_.toLowerCase).toList.asJava
+                                else
+                                    null
                             }
-                            else
-                                null
+                            config.destination.database.snowflake.copy(keyFields = fields)
                         }
                         else
                             null
@@ -313,12 +314,13 @@ object DatasetValidatorUtil {
 
                     val redshift = {
                         if(config.destination.database.redshift != null) {
-                            if(config.destination.database.redshift.keyFields != null) {
-                                val fields = config.destination.database.redshift.keyFields.asScala.map(_.toLowerCase).toList.asJava
-                                config.destination.database.redshift.copy(keyFields = fields)
+                            val fields = {
+                                if(config.destination.database.redshift.keyFields != null)
+                                    config.destination.database.redshift.keyFields.asScala.map(_.toLowerCase).toList.asJava
+                                else
+                                    null
                             }
-                            else
-                                null
+                            config.destination.database.redshift.copy(keyFields = fields)
                         }
                         else
                             null

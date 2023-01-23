@@ -44,6 +44,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.sns.sendNotifications}")
     var snsSendNotifications: Boolean = _
 
+    @Value("${aws.sqs.ttlFileNotifierQueueMessages}")
+    var ttlFileNotifierQueueMessages: Int = _
+
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
@@ -55,7 +58,7 @@ class StartupRunner extends ApplicationRunner {
         val datasetTableName = environment + "-dataset"
         val archivedMetadataTableName = environment + "-archived-metadata"
         val datasetStatusTableName = environment + "-dataset-status"
-        val sqsMessageTableName = environment + "-sqs-message"
+        val fileNotifierMessageTableName = environment + "-file-notifier-message"
 
         // Send SNS notifications?
         val notifyTopicArn = {
@@ -69,11 +72,12 @@ class StartupRunner extends ApplicationRunner {
             environment,
             region,
             fileNotifierQueue,
+            ttlFileNotifierQueueMessages,
             notifyTopicArn,
             datasetTableName,
             archivedMetadataTableName,
             datasetStatusTableName,
-            sqsMessageTableName,
+            fileNotifierMessageTableName,
             apiKeysSecretName,
             snowflakeSecretName,
             redshiftSecretName

@@ -6,7 +6,7 @@ variable "environment_name" {
 
 variable "apikeys_name" {
   description = "Name for the api-keys that will be stored in Secrets Manager"
-  default     = "idata-poc-apikeys"
+  default     = "idata-poc-my-apikeys"
 }
 
 variable "apikeys" {

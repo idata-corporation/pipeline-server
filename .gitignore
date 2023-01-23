@@ -6,7 +6,6 @@ project/*
 target/
 build/
 test/
-.terraform/
 
 # eclipse
 build
@@ -31,7 +30,12 @@ build
 .scala_dependencies
 .cache
 .cache-main
-.terraform
 
 #general
 *.class
+
+# terraform
+.terraform
+.terraform/
+*.hcl
+

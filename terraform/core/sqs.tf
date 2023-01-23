@@ -173,24 +173,3 @@ data "aws_iam_policy_document" "notification_policy_document" {
     }
   }
 }
-
-# staging-notifier
-resource "aws_sqs_queue" "staging_notifier" {
-  name = "${var.environment_name}-staging-notifier"
-
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.staging_notifier_dlq.arn
-    maxReceiveCount     = 3
-  })
-
-  tags = {
-    name = var.environment_name
-  }
-}
-
-resource "aws_sqs_queue" "staging_notifier_dlq" {
-  name = "${var.environment_name}-staging-notifier-dlq"
-  tags = {
-    name = var.environment_name
-  }
-}

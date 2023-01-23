@@ -29,6 +29,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
+import java.util.Calendar
 import scala.collection.JavaConverters._
 
 @Component
@@ -44,10 +45,10 @@ class ScheduledBatchTasks {
                 val gson = new Gson
                 messages.asScala.foreach(message => {
                     val sqsMessage = gson.fromJson(message.getBody, classOf[SQSMessageS3])
+                    QueueUtil.deleteMessage(PipelineEnvironment.values.fileNotifierQueue, message.getReceiptHandle)
 
-                    if(! hasMessageBeenProcessed(message.getMessageId, sqsMessage)) {
-                        QueueUtil.deleteMessage(PipelineEnvironment.values.fileNotifierQueue, message.getReceiptHandle)
-                        if(sqsMessage.Records != null) {
+                    if(sqsMessage != null && sqsMessage.Records != null) {
+                        if(! hasMessageBeenProcessed(message.getMessageId, sqsMessage)) {
                             sqsMessage.Records.asScala.map(record => {
                                 (record.s3.bucket.name, record.s3.`object`.key)
                             }).toMap
@@ -66,10 +67,16 @@ class ScheduledBatchTasks {
 
     private def hasMessageBeenProcessed(messageID: String, sqsMessageS3: SQSMessageS3): Boolean = {
         // Check the NoSQL table to determine if this message has already been processed
-        val message = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.sqsMessageTableName, "id", messageID, "value")
+        val message = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.fileNotifierMessageTableName, "id", messageID, "value")
         if(message.isEmpty) {
-            val gson = new Gson
-            NoSQLDbUtil.putItemJSON(PipelineEnvironment.values.sqsMessageTableName, "id", messageID, "value", gson.toJson(sqsMessageS3))
+            // Create a future TTL
+            val now = Calendar.getInstance
+            now.add(Calendar.DATE, PipelineEnvironment.values.ttlFileNotifierQueueMessages) // Days in future for TTL to delete this new entry from the table
+            val epoch = now.getTime.getTime
+            logger.info("File notifier queue message TTL: " + epoch.toString)
+
+            // Write out the SQS Message ID with the future TTL
+            NoSQLDbUtil.setItemNameValue(PipelineEnvironment.values.fileNotifierMessageTableName, "id", messageID, "ttl", epoch.toString)
             false
         }
         else
@@ -113,7 +120,12 @@ class ScheduledBatchTasks {
     private def isDatabaseJobForDatasetAlreadyRunning(jobContext: JobContext): Boolean = {
         if(jobContext.config.destination.database != null) {
             // Find the jobs with the same database table name
-            val jobContextsWithDbTableName = GlobalJobContext.getAll.filter(_.config.destination.database.table.compareTo(jobContext.config.destination.database.table) == 0).toList
+            val jobContextsWithDbTableName = GlobalJobContext.getAll.flatMap(jc => {
+                if(jc.config.destination.database != null && jc.config.destination.database.table.compareTo(jobContext.config.destination.database.table) == 0)
+                    Some(jc)
+                else
+                    None
+            }).toList
 
             // Do any exist that are running?
             jobContextsWithDbTableName.exists(_.state == PROCESSING)

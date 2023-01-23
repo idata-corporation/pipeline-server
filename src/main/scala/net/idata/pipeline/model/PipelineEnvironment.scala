@@ -30,11 +30,12 @@ case class PipelineEnvironment(
                                   environment: String,
                                   region: String,
                                   fileNotifierQueue: String,
+                                  ttlFileNotifierQueueMessages: Int,
                                   notifyTopicArn: String,
                                   datasetTableName: String,
                                   archivedMetadataTableName: String,
                                   datasetStatusTableName: String,
-                                  sqsMessageTableName: String,
+                                  fileNotifierMessageTableName: String,
                                   apiKeysSecretName: String,
                                   snowflakeSecretName: String,
                                   redshiftSecretName: String
