@@ -70,6 +70,11 @@ class RedshiftLoader(jobContext: JobContext) {
 
             val stageUrl = prepareStagingFile()
 
+            if(config.destination.database.truncateBeforeWrite) {
+                logger.info("'truncateTableBeforeWrite' is set to true, truncating table")
+                statement.execute("truncate table " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table)
+            }
+
             if(config.destination.database.redshift.keyFields != null)
                 mergeInto(statement, dbRole, stageUrl)
             else
@@ -102,29 +107,22 @@ class RedshiftLoader(jobContext: JobContext) {
         }
     }
 
-    private def copyInto(statement: Statement, dbRole: String, stageUrl: String, tempTableName: String = null, createTable: Boolean = true): Unit = {
-        val table = {
-            if(tempTableName == null)
-                config.destination.database.table
-            else
-                tempTableName
-        }
+    private def copyInto(statement: Statement, dbRole: String, stageUrl: String): Unit = {
+        statusUtil.info("processing", "Copying data into " + config.destination.database.table)
 
-        if(createTable)
-            createTableIfUndefined(statement, table)
-
-        statusUtil.info("processing", "Copying data into " + table)
+        if(!config.destination.database.manageTableManually)
+            createTableIfUndefined(statement, config.destination.database.table)
 
         val command = new StringBuilder()
         if(config.source.fileAttributes.jsonAttributes != null) {
-            command.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + table +
+            command.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table +
                 " FROM '" + stageUrl + "'" +
                 " CREDENTIALS '" + "aws_iam_role=" + dbRole + "'" +
                 " FORMAT JSON 'noshred'"
             )
         }
         else {
-            command.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + table +
+            command.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table +
                 " FROM '" + stageUrl + "'" +
                 " CREDENTIALS '" + "aws_iam_role=" + dbRole + "'" +
                 " FORMAT AS PARQUET"
@@ -136,19 +134,25 @@ class RedshiftLoader(jobContext: JobContext) {
     }
 
     private def mergeInto(statement: Statement, dbRole: String, stageUrl: String): Unit = {
-        val tempTableName = config.destination.database.table + "_" + System.currentTimeMillis().toString
-
-        // Create the table
-        createTableIfUndefined(statement, config.destination.database.table)
-
         statusUtil.info("processing", "Merging data into " + config.destination.database.table)
 
-        // Create the temp table
+        // Create the table
+        if(!config.destination.database.manageTableManually)
+            createTableIfUndefined(statement, config.destination.database.table)
+
         statement.execute("begin transaction")
+
+        // Create the temp table
+        val tempTableName = config.destination.database.table + "_" + System.currentTimeMillis().toString
         createTableIfUndefined(statement, tempTableName)
 
         // Copy the data into a temp table
-        copyInto(statement, dbRole, stageUrl, tempTableName, createTable = false)
+        val tempSql = "COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + tempTableName +
+            " FROM '" + stageUrl + "'" +
+            " CREDENTIALS '" + "aws_iam_role=" + dbRole + "'" +
+            " FORMAT AS PARQUET"
+        logger.info("Copy into temp table command: " + tempSql)
+        statement.execute(tempSql)
 
         // Merge the tables by key fields
         val sql = new StringBuilder()
@@ -162,6 +166,7 @@ class RedshiftLoader(jobContext: JobContext) {
         statement.execute(sql.mkString)
         statement.execute("insert into " + tableName + " select * from " + tempTableName)
         statement.execute("drop table " + tempTableName)
+
         statement.execute("end transaction")
     }
 

@@ -84,8 +84,9 @@ case class ObjectStore(
 case class Database(
                        dbName: String, // Database name
                        schema: String,
-                       table: String,  // Table name
-                       deleteBeforeWrite: Boolean,
+                       table: String, // Table name
+                       manageTableManually: Boolean,
+                       truncateBeforeWrite: Boolean,
                        snowflake: Snowflake,
                        redshift: Redshift
                    )

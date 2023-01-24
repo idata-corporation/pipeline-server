@@ -71,7 +71,8 @@ class SnowflakeLoader(jobContext: JobContext) {
             logger.info("Snowflake connection acquired")
             statement = conn.createStatement()
 
-            createTableIfUndefined(statement)
+            if(!config.destination.database.manageTableManually)
+                createTableIfUndefined(statement)
 
             val snowflakeStageUrl = prepareStagingFile()
 
@@ -139,9 +140,14 @@ class SnowflakeLoader(jobContext: JobContext) {
 
     private def processFromStage(stageName: String, stageUrl: String, statement: Statement): Unit = {
         // Use warehouse, DB, schema name
-        statement.executeUpdate("USE WAREHOUSE " + config.destination.database.snowflake.warehouse)
-        statement.executeUpdate("USE " + config.destination.database.dbName)
-        statement.executeUpdate("USE SCHEMA " + config.destination.database.schema)
+        statement.execute("USE WAREHOUSE " + config.destination.database.snowflake.warehouse)
+        statement.execute("USE " + config.destination.database.dbName)
+        statement.execute("USE SCHEMA " + config.destination.database.schema)
+
+        if(config.destination.database.truncateBeforeWrite) {
+            logger.info("'truncateTableBeforeWrite' is set to true, truncating table")
+            statement.execute("truncate table " + config.destination.database.table)
+        }
 
         val fileFormat = buildFileFormat()
         logger.info("File format SQL command: " + fileFormat)
