@@ -23,7 +23,7 @@ import net.idata.pipeline.model.Subscription
 
 trait NotificationUtility {
     def add(topicArn: String, json: String): PublishResult
-    def addFifo(topicArn: String, json: String): PublishResult
+    def add(topicArn: String, json: String, filter: Map[String, String]): PublishResult
     def addSubscription(subscription: Subscription): Subscription
     def getSubscription(subscriptionArn: String): Subscription
     def deleteSubscription(subscriptionArn: String): Unit

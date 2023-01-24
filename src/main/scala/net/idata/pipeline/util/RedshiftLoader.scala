@@ -26,6 +26,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.sql.{Connection, DriverManager, Statement}
 import java.time.Instant
 import java.util.Properties
+import scala.collection.JavaConverters._
 
 class RedshiftLoader(jobContext: JobContext) {
     private val logger: Logger = LoggerFactory.getLogger(classOf[RedshiftLoader])
@@ -225,7 +226,16 @@ class RedshiftLoader(jobContext: JobContext) {
         )
         val gson = new Gson
         val jsonNotification = gson.toJson(notification)
+
+        // Create the message attributes for the SNS filter policy
+        val attributes = new java.util.HashMap[String, String]
+        attributes.put("dataset", config.name)
+        attributes.put("destination", "redshift")
+        attributes.put("schema", config.destination.database.schema)
+        attributes.put("database", config.destination.database.dbName)
+        attributes.put("table", config.destination.database.table)
+
+        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
         logger.info("notification sent: " + jsonNotification)
-        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification)
     }
 }

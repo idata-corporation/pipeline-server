@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import com.amazonaws.services.sns.model.{PublishRequest, PublishResult, SubscribeRequest}
+import com.amazonaws.services.sns.model.{MessageAttributeValue, PublishRequest, PublishResult, SubscribeRequest}
 import com.amazonaws.services.sns.{AmazonSNS, AmazonSNSClientBuilder}
 import net.idata.pipeline.model.{PipelineException, Subscription}
 import net.idata.pipeline.util.NotificationUtility
@@ -28,35 +28,25 @@ import scala.collection.mutable
 
 class SNSUtil(val sns: AmazonSNS) extends NotificationUtility {
     override def add(topicArn: String, json: String): PublishResult = {
-        add(topicArn, null, json)
+        val publishRequest = new PublishRequest().withTopicArn(topicArn).withMessage(json)
+        sns.publish(publishRequest)
     }
 
-    override def addFifo(topicArn: String, json: String): PublishResult = {
-        val messageGroupId: String = "snowflakeloader-message-group" // The snowflakeloader does not require individual message groups
-        add(topicArn, messageGroupId, json)
-    }
-
-    private def add(topicArn: String, messageGroupID: String, json: String): PublishResult = {
-        val publishRequest = {
-            // TODO: Add this back when Databricks upgrades their AWS SDK version
-            /*
-            if (messageGroupID != null) {
-                val messageDedupilicationId = GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString
-
-                // If messageGroupID is not null, the topic sent to must be a FIFO topic
-                new PublishRequest()
-                    .withTopicArn(topicArn)
-                    .withMessageGroupId(messageGroupID)
-                    .withMessageDeduplicationId(messageDedupilicationId)
-                    .withMessage(json)
+    override def add(topicArn: String, json: String, filter: Map[String, String]): PublishResult = {
+        val messageAttributeMap = filter.map { case (name, value) =>
+            val messageAttribute = {
+                if(value.contains(","))
+                    new MessageAttributeValue().withDataType("String.Array").withStringValue(value)
+                else
+                    new MessageAttributeValue().withDataType("String").withStringValue(value)
             }
-            else {
-*/
-            new PublishRequest()
-                .withTopicArn(topicArn)
-                .withMessage(json)
-            //}
-        }
+            (name, messageAttribute)
+        }.asJava
+
+        val publishRequest = new PublishRequest()
+            .withTopicArn(topicArn)
+            .withMessage(json)
+            .withMessageAttributes(messageAttributeMap)
 
         sns.publish(publishRequest)
     }

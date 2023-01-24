@@ -170,7 +170,14 @@ class ObjectStoreLoader(jobContext: JobContext) {
         )
         val gson = new Gson
         val jsonNotification = gson.toJson(notification)
+
+        // Create the message attributes for the SNS filter policy
+        val attributes = new java.util.HashMap[String, String]
+        attributes.put("dataset", config.name)
+        attributes.put("prefixKey", config.destination.objectStore.prefixKey)
+        attributes.put("destination", "objectStore")
+
+        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
         logger.info("notification sent: " + jsonNotification)
-        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification)
     }
 }
