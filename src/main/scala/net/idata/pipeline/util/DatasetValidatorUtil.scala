@@ -30,11 +30,31 @@ object DatasetValidatorUtil {
             throw new PipelineException("dataset 'name' cannot be greater than 80 characters")
 
         // Source config
-        if(config.source == null)
+        if (config.source == null)
             throw new PipelineException("dataset 'source' is not defined in the JSON")
-        if(config.source.fileAttributes == null)
+        if (config.source.fileAttributes == null)
             throw new PipelineException("'source.fileAttributes' must be defined")
 
+        if (config.source.fileAttributes.unstructuredAttributes != null)
+            validateUnstructured(config: DatasetConfig)
+        else
+            validateStructuredAndSemiStructured(config: DatasetConfig)
+    }
+
+    private def validateUnstructured(config: DatasetConfig): Unit = {
+        if(config.source.fileAttributes.unstructuredAttributes.fileExtension == null)
+            throw new PipelineException("For unstructured files, the 'source.fileAttributes.unstructuredAttributes.fileExtension' cannot be null")
+        if(config.destination == null)
+            throw new PipelineException("For unstructured files, the 'destination' cannot be null and 'objectStore' must also be defined")
+        if(config.destination.objectStore == null)
+            throw new PipelineException("For unstructured files, the 'destination.objectStore' cannot be null")
+        if(config.destination.objectStore.prefixKey == null)
+            throw new PipelineException("For unstructured files, the 'destination.objectStore.prefixKey' cannot be null")
+        if(config.destination.objectStore.useIceberg)
+            throw new PipelineException("The 'iceberg' object store format is not supported for unstructured files")
+    }
+
+    private def validateStructuredAndSemiStructured(config: DatasetConfig): Unit = {
         // Source schema properties
         if(config.source.schemaProperties == null)
             throw new PipelineException("'source.schemaProperties' must be defined")
@@ -65,6 +85,8 @@ object DatasetValidatorUtil {
 
         // Destination object store
         if(config.destination.objectStore != null) {
+            if(config.source.fileAttributes.csvAttributes == null)
+                throw new PipelineException("A destination of 'objectStore' is only supported for CSV files")
             if(config.destination.objectStore.prefixKey == null)
                 throw new PipelineException("If the 'destination.objectStore' section is defined, the 'destination.objectStore.prefixKey' must be defined")
             if(config.destination.objectStore.partitionBy != null) {
@@ -231,8 +253,12 @@ object DatasetValidatorUtil {
 
     def lowercaseConfig(config: DatasetConfig): DatasetConfig = {
         val sourceSchemaProperties = {
-            val fields = config.source.schemaProperties.fields.asScala.map(field => SchemaField(field.name.toLowerCase, field.`type`.toLowerCase)).toList.asJava
-            SchemaProperties(config.source.schemaProperties.dbName, fields)
+            if(config.source.schemaProperties != null) {
+                val fields = config.source.schemaProperties.fields.asScala.map(field => SchemaField(field.name.toLowerCase, field.`type`.toLowerCase)).toList.asJava
+                SchemaProperties(config.source.schemaProperties.dbName, fields)
+            }
+            else
+                null
         }
 
         val destinationSchemaProperties = {
@@ -267,7 +293,9 @@ object DatasetValidatorUtil {
                         null
                 }
                 val fileFormat = {
-                    if(config.destination.objectStore.fileFormat != null)
+                    if(config.source.fileAttributes.unstructuredAttributes != null)
+                        null
+                    else if(config.destination.objectStore.fileFormat != null)
                         config.destination.objectStore.fileFormat
                     else
                         "parquet" // default output file format

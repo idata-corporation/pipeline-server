@@ -66,4 +66,25 @@ resource "aws_s3_bucket_notification" "raw_notification" {
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".dataset.xml"
   }
+
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.png"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.jpeg"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.gif"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.pdf"
+  }
 }

@@ -97,7 +97,10 @@ class DatasetAPIController {
                 else {
                     // Read back the config so the destination.schemaProperties are set if they did not exist
                     val newConfig = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, config.name)
-                    DatasetObjectStoreUtil.createTable(newConfig)
+
+                    // Create a Glue table for source CSV data
+                    if(config.source.fileAttributes.csvAttributes != null)
+                        DatasetObjectStoreUtil.createTable(newConfig)
                 }
             }
 

@@ -29,6 +29,7 @@ import scala.collection.JavaConverters._
 class ObjectStoreLoader(jobContext: JobContext) {
     private val logger: Logger = LoggerFactory.getLogger(classOf[ObjectStoreLoader])
     private val config = jobContext.config
+    private val objectStore = config.destination.objectStore
     private val statusUtil = jobContext.statusUtil
 
     def process(): Unit = {
@@ -36,9 +37,17 @@ class ObjectStoreLoader(jobContext: JobContext) {
 
         statusUtil.info("begin", "Loading the dataset into object store: " + config.name)
 
+        if(config.source.fileAttributes.unstructuredAttributes != null)
+            processUnstructuredData()
+        else
+            processStructuredData()
+
+        statusUtil.info("end", "Process completed")
+    }
+
+    private def processStructuredData(): Unit = {
         val databaseName = config.destination.schemaProperties.dbName
         val tableName = config.name
-        val objectStore = config.destination.objectStore
 
         // Move the file(s) to a unique path in the -temp bucket
         val tempLocation = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
@@ -86,7 +95,57 @@ class ObjectStoreLoader(jobContext: JobContext) {
         }
 
         sendNotification(destinationUrl, writeToTempUrl)
-        statusUtil.info("end", "Process completed")
+    }
+
+    private def processUnstructuredData(): Unit = {
+        // Simply copy the original source file(s) to the destination
+        //
+
+        val baseDestinationUrl = {
+            if(objectStore.destinationBucketOverride != null)
+                "s3://" + PipelineEnvironment.values.environment + "-" + objectStore.destinationBucketOverride + "/" + objectStore.prefixKey + "/" + config.name + "/"
+            else
+                "s3://" + PipelineEnvironment.values.environment + "-raw-plus/" + objectStore.prefixKey + "/" + config.name + "/"
+        }
+        val baseTempUrl = {
+            if(objectStore.writeToTemporaryLocation)
+                "s3://" + PipelineEnvironment.values.environment + "-temp/delta/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
+            else
+                null
+        }
+
+        // Delete the existing data first?
+        deleteBeforeWrite(baseDestinationUrl)
+
+        val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
+        files.foreach(fileUrl => {
+            val filename = {
+                if(config.source.fileAttributes.unstructuredAttributes.preserveFilename)
+                    fileUrl.substring(fileUrl.lastIndexOf('/') + 1)
+                else
+                    GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "." + config.source.fileAttributes.unstructuredAttributes.fileExtension
+            }
+            val destinationUrl = baseDestinationUrl + filename
+
+            statusUtil.info("processing", "Copying: " + fileUrl + " to: " + destinationUrl)
+            ObjectStoreUtil.copyBucketObject(
+                ObjectStoreUtil.getBucket(fileUrl),
+                ObjectStoreUtil.getKey(fileUrl),
+                ObjectStoreUtil.getBucket(destinationUrl),
+                ObjectStoreUtil.getKey(destinationUrl))
+
+            // Write to temporary location
+            val tempUrl = baseTempUrl + filename
+            if(objectStore.writeToTemporaryLocation) {
+                ObjectStoreUtil.copyBucketObject(
+                    ObjectStoreUtil.getBucket(fileUrl),
+                    ObjectStoreUtil.getKey(fileUrl),
+                    ObjectStoreUtil.getBucket(tempUrl),
+                    ObjectStoreUtil.getKey(tempUrl))
+            }
+        })
+
+        sendNotification(baseDestinationUrl, baseTempUrl)
     }
 
     private def deleteBeforeWrite(destinationUrl: String): Unit = {
@@ -94,7 +153,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
             if(config.destination.objectStore.useIceberg)
                 IcebergUtil.deleteData(config.destination.schemaProperties.dbName, config.name)
             else {
-                logger.info("'deleteBeforeWrite' flag is set, deleting data at: " + destinationUrl)
+                statusUtil.info("processing", "'deleteBeforeWrite' flag is set, deleting data at: " + destinationUrl)
                 ObjectStoreUtil.deleteFolder(ObjectStoreUtil.getBucket(destinationUrl), ObjectStoreUtil.getKey(destinationUrl))
 
                 // Wait for S3 eventual consistency
@@ -150,7 +209,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
             }
         }
 
-        logger.info("AthenUtil sql: " + sql)
+        statusUtil.info("processing", "AthenUtil sql: " + sql)
         val outputPath = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + ".out"
         ObjectStoreSQLUtil.sql(databaseName, sql, outputPath)
     }

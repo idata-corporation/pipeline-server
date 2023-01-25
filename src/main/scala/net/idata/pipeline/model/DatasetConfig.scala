@@ -50,7 +50,8 @@ case class DataQuality(
 case class FileAttributes(
                              csvAttributes: CsvAttributes,
                              jsonAttributes: JsonAttributes,
-                             xmlAttributes: XmlAttributes
+                             xmlAttributes: XmlAttributes,
+                             unstructuredAttributes: UnstructuredAttributes
                          )
 
 case class CsvAttributes(
@@ -68,6 +69,11 @@ case class XmlAttributes(
                             everyRowContainsObject: Boolean,    // If true, each row of the file contains an XML object
                             encoding: String,     // UTF-8, ISO-8859-1, etc
                         )
+
+case class UnstructuredAttributes(
+                                     fileExtension: String,
+                                     preserveFilename: Boolean
+                                 )
 
 case class ObjectStore(
                           prefixKey: String,

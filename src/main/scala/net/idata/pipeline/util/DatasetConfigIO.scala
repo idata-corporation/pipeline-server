@@ -62,6 +62,8 @@ object DatasetConfigIO {
             "json"
         else if(fileAttributes.xmlAttributes != null)
             "xml"
+        else if(fileAttributes.unstructuredAttributes != null)
+            fileAttributes.unstructuredAttributes.fileExtension
         else
             throw new PipelineException("The dataset configuration fileAttributes are not configured properly")
     }
