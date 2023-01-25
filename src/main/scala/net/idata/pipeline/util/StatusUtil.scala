@@ -107,7 +107,9 @@ class StatusUtil {
             case "warning" =>
                 if(state.compareTo("processing") == 0)
                     logger.warn(description)
-            case "error" => // do not log this because the Exception will be logged automatically
+            case "error" =>
+                if(state.compareTo("processing") == 0)
+                    logger.error(description)
         }
     }
 

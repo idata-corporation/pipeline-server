@@ -44,8 +44,16 @@ case class SchemaProperties(
 case class DataQuality(
                           validateFileHeader: Boolean,
                           deduplicate: Boolean,
-                          validationSchema: String
+                          validationSchema: String,
+                          columnRules: java.util.List[ColumnRule]
                       )
+
+case class ColumnRule(
+                         columnName: String,
+                         function: String,
+                         parameter: String,
+                         onFailureIsError: Boolean
+                     )
 
 case class FileAttributes(
                              csvAttributes: CsvAttributes,

@@ -69,29 +69,15 @@ class DataQuality(jobContext: JobContext) {
 
         // Dedup data?
         val jobContextDQ = {
-            if(config.dataQuality.deduplicate) {
-                statusUtil.info("processing", "Running deduplication")
-
-                // Dedup each file and copy to a temp bucket
-                val tempLocation = "s3://" + PipelineEnvironment.values.environment + "-temp/dataquality/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
-                var totalDeduped = 0
-                files.foreach(fileUrl => {
-                    val (deduped, count) = dedup(fileUrl, config)
-                    totalDeduped = totalDeduped + count
-
-                    val tempFilename = jobContext.config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
-                    ObjectStoreUtil.writeBucketObject(
-                        ObjectStoreUtil.getBucket(tempLocation + tempFilename),
-                        ObjectStoreUtil.getKey(tempLocation + tempFilename),
-                        deduped)
-                })
-                statusUtil.info("processing", totalDeduped.toString + " rows were duplicates and removed")
-
-                val metadata = jobContext.metadata.copy(transformedPath = tempLocation)
-                jobContext.copy(metadata = metadata)
-            }
+            if(config.dataQuality.deduplicate)
+                deduplicate(files)
             else
                 jobContext
+        }
+
+        // Column rules?
+        if(config.dataQuality.columnRules != null) {
+            new DataRulesUtil(jobContextDQ).runColumnRules()
         }
 
         statusUtil.info("end", "Process completed successfully")
@@ -112,7 +98,29 @@ class DataQuality(jobContext: JobContext) {
         }
     }
 
-    private def dedup(fileUrl: String, config: DatasetConfig): (String, Int) = {
+    private def deduplicate(files: List[String]): JobContext = {
+        statusUtil.info("processing", "Running deduplication")
+
+        // Dedup each file and copy to a temp bucket
+        val tempLocation = "s3://" + PipelineEnvironment.values.environment + "-temp/dataquality/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
+        var totalDeduped = 0
+        files.foreach(fileUrl => {
+            val (deduped, count) = dedupeFile(fileUrl)
+            totalDeduped = totalDeduped + count
+
+            val tempFilename = jobContext.config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
+            ObjectStoreUtil.writeBucketObject(
+                ObjectStoreUtil.getBucket(tempLocation + tempFilename),
+                ObjectStoreUtil.getKey(tempLocation + tempFilename),
+                deduped)
+        })
+        statusUtil.info("processing", totalDeduped.toString + " rows were duplicates and removed")
+
+        val metadata = jobContext.metadata.copy(transformedPath = tempLocation)
+        jobContext.copy(metadata = metadata)
+    }
+
+    private def dedupeFile(fileUrl: String): (String, Int) = {
         logger.info("Performing deduplication on file: " + fileUrl)
 
         val file = new CSVReader().readFile(fileUrl,
