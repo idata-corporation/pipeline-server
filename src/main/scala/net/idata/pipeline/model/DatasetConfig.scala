@@ -45,8 +45,15 @@ case class DataQuality(
                           validateFileHeader: Boolean,
                           deduplicate: Boolean,
                           validationSchema: String,
+                          rowRules: java.util.ArrayList[RowRule],
                           columnRules: java.util.List[ColumnRule]
                       )
+
+case class RowRule(
+                      function: String,
+                      parameters: java.util.List[String],
+                      onFailureIsError: Boolean
+                  )
 
 case class ColumnRule(
                          columnName: String,

@@ -75,10 +75,13 @@ class DataQuality(jobContext: JobContext) {
                 jobContext
         }
 
+        // Row rules?
+        if(config.dataQuality.columnRules != null)
+            new DataRulesUtil(jobContextDQ).runRowRules()
+
         // Column rules?
-        if(config.dataQuality.columnRules != null) {
+        if(config.dataQuality.columnRules != null)
             new DataRulesUtil(jobContextDQ).runColumnRules()
-        }
 
         statusUtil.info("end", "Process completed successfully")
         jobContextDQ
