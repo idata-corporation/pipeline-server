@@ -81,6 +81,24 @@ object DatasetValidatorUtil {
                 if(config.source.fileAttributes.jsonAttributes == null && config.source.fileAttributes.xmlAttributes == null)
                     throw new PipelineException("In the 'dataQuality' section, 'validationSchema' is only valid for JSON or XML files")
             }
+            if(config.dataQuality.rowRules != null) {
+                config.dataQuality.rowRules.asScala.foreach(rule => {
+                    if(rule.function == null || rule.function.compareTo("javascript") != 0)
+                        throw new PipelineException("In the 'dataQuality.rowRules' section, 'function' must be defined as 'javascript'")
+                    if(rule.parameters == null || rule.parameters.asScala.head == null)
+                        throw new PipelineException("In the 'dataQuality.rowRules' section, the first parameter must be either the full path " +
+                            "to the javascript file or the name of the javascript file (which will need to be placed in the s3://[environment-name]-config/javascript location)")
+                })
+
+            }
+            if(config.dataQuality.columnRules != null) {
+                config.dataQuality.columnRules.asScala.foreach(rule => {
+                    if(rule.function == null || rule.function.compareTo("regex") != 0)
+                        throw new PipelineException("In the 'dataQuality.columnRules' section, 'function' must be defined as 'regex'")
+                    if(rule.parameter == null)
+                        throw new PipelineException("In the 'dataQuality.columnRules' section, the 'parameter' should be defined as the regular expression")
+                })
+            }
         }
 
         // Destination object store
