@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import net.idata.pipeline.model.{JobContext, PipelineException}
-import net.idata.pipeline.util.{DataQuality, ObjectStoreLoader, RedshiftLoader, SnowflakeLoader}
+import net.idata.pipeline.util._
 import org.slf4j.{Logger, LoggerFactory}
 
 class JobRunner(jobContext: JobContext) extends Runnable {
@@ -44,7 +44,10 @@ class JobRunner(jobContext: JobContext) extends Runnable {
 
             // Transformations?
             val jobContextTransform = {
-                jobContextDQ
+                if(config.transformation != null)
+                    new Transformation(jobContextDQ).process()
+                else
+                    jobContextDQ
             }
 
             if(config.destination.objectStore != null)

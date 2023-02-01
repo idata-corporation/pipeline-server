@@ -57,7 +57,7 @@ object GlueUtil {
             config.destination.objectStore.fileFormat)
     }
 
-    def createTable(databaseName: String, tableName: String, fields: List[SchemaField], partitionBy: List[String], locationUrl: String, fileFormat: String = "parquet", header: Boolean = false, textFileDelimiter: String = ","): Unit = {
+    def createTable(databaseName: String, tableName: String, fields: List[SchemaField], partitionBy: List[String], locationUrl: String, fileFormat: String = "parquet", textFileDelimiter: String = ","): Unit = {
         val glue = getGlueClient
 
         // If the Glue database does not exist, create it
@@ -65,7 +65,7 @@ object GlueUtil {
             createDatabase(databaseName)
 
         // Create the Glue table (or a new version if it already exists)
-        val tableInput = createTableInput(tableName, fields, partitionBy, locationUrl, fileFormat, header, textFileDelimiter)
+        val tableInput = createTableInput(tableName, fields, partitionBy, locationUrl, fileFormat, textFileDelimiter)
         if(getTable(databaseName, tableName) != null) {
             val updateTableRequest = new UpdateTableRequest()
                 .withDatabaseName(databaseName)
@@ -160,7 +160,7 @@ object GlueUtil {
         glue.createDatabase(createDatabaseRequest)
     }
 
-    private def createTableInput(tableName: String, fields: List[SchemaField], partitionBy: List[String], locationUrl: String, fileFormat: String, header: Boolean, textFileDelimiter: String): TableInput = {
+    private def createTableInput(tableName: String, fields: List[SchemaField], partitionBy: List[String], locationUrl: String, fileFormat: String, textFileDelimiter: String): TableInput = {
         val (inputFormat, outputFormat, serializationLibrary) = getFileFormats(fileFormat)
 
         val serdeParameters = new java.util.HashMap[String, String]()
@@ -171,8 +171,6 @@ object GlueUtil {
             serdeParameters.put("serialization.format", textFileDelimiter)
             serdeParameters.put("quoteChar", "\"")
             serdeParameters.put("escapeChar", "\\")
-            if(header)
-                serdeParameters.put("skip.header.line.count", "1")
         }
         else if(fileFormat.compareToIgnoreCase("parquet") == 0) {
             serdeParameters.put("serialization.format", "1")

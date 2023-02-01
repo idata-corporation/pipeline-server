@@ -1,4 +1,4 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.model
 
 /*
 IData Pipeline
@@ -18,14 +18,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import javax.script.ScriptEngineManager
-
-object JavaScriptUtil {
-    def run(columnDataMap: Map[String, Any], script: String): String = {
-        val engine = new ScriptEngineManager().getEngineByName("JavaScript")
-        val bindings = engine.createBindings()
-        columnDataMap.foreach { case (key, value) => bindings.put(key, value) }
-
-        engine.eval(script, bindings).asInstanceOf[String]
-    }
-}
+case class Data(
+                    size: Long,
+                    header: List[String],
+                    rows: List[String],
+                    rawData: String
+               )

@@ -25,7 +25,7 @@ case class JobContext(
                          key: String,
                          pipelineToken: String,
                          metadata: DatasetMetadata,
-                         fileSize: Long,
+                         data: Data,
                          config: DatasetConfig,
                          state: JobState,
                          thread: Thread,

@@ -29,10 +29,7 @@ import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.SchemaFactory
 
 object SchemaValidationUtil {
-    def validateJson(dataFileUrl: String, schemaFileUrl: String): Unit = {
-        val data = ObjectStoreUtil.readBucketObject(ObjectStoreUtil.getBucket(dataFileUrl), ObjectStoreUtil.getKey(dataFileUrl))
-            .getOrElse("Could not read the data file: " + dataFileUrl)
-
+    def validateJson(data: String, schemaFileUrl: String): Unit = {
         val jsonSchema = ObjectStoreUtil.readBucketObject(ObjectStoreUtil.getBucket(schemaFileUrl), ObjectStoreUtil.getKey(schemaFileUrl))
             .getOrElse(throw new PipelineException("Could not read the validation schema file: " + schemaFileUrl))
 
@@ -43,10 +40,7 @@ object SchemaValidationUtil {
         schema.validate(dataObject)
     }
 
-    def validateXml(dataFileUrl: String, schemaFileUrl: String): Unit = {
-        val data = ObjectStoreUtil.readBucketObject(ObjectStoreUtil.getBucket(dataFileUrl), ObjectStoreUtil.getKey(dataFileUrl))
-            .getOrElse("Could not read the data file: " + dataFileUrl)
-
+    def validateXml(data: String, schemaFileUrl: String): Unit = {
         val xmlSchema = ObjectStoreUtil.readBucketObject(ObjectStoreUtil.getBucket(schemaFileUrl), ObjectStoreUtil.getKey(schemaFileUrl))
             .getOrElse(throw new PipelineException("Could not read the validation schema: " + schemaFileUrl))
         val xmlDataStream = new ByteArrayInputStream(data.getBytes())
@@ -59,7 +53,7 @@ object SchemaValidationUtil {
         }
         catch {
             case e: SAXException =>
-                throw new PipelineException("The XML file: " + dataFileUrl + " did not pass the XML Schema validation against the XML schema: " + schemaFileUrl + ", error: " + e.getMessage)
+                throw new PipelineException("The XML data did not pass the XML Schema validation against the XML schema: " + schemaFileUrl + ", error: " + e.getMessage)
         }
     }
 }

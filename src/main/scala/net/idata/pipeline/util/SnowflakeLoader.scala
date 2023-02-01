@@ -101,20 +101,22 @@ class SnowflakeLoader(jobContext: JobContext) {
     private def prepareParquetStagingFile(stageUrl: String): Unit = {
         logger.info("Preparing parquet staging file(s) at location: " + stageUrl)
 
-        ParquetUtil.convertCSVs(stageUrl, config, jobContext.metadata)
+        ParquetUtil.convertCSVs(jobContext.data, stageUrl, config)
     }
 
     private def prepareCsvStagingFile(stageUrl: String): String = {
         logger.info("Preparing CSV staging file at location: " + stageUrl)
 
-        // TODO: Get first file for now
-        val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
-        val fileUrl = files.head
-
         // If the incoming file is a CSV read the file and filter out the header and appropriate columns based upon the destination schema
         if(config.source.fileAttributes.csvAttributes != null) {
-            val file = new CSVReader().readFile(fileUrl,
-                config.source.fileAttributes.csvAttributes.header,
+            // Write the data to a temp location
+            val tempUrl = "s3://" + PipelineEnvironment.values.environment + "-temp/data/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".csv"
+            val data = jobContext.data.rows.mkString("\n")
+            ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(tempUrl), ObjectStoreUtil.getKey(tempUrl), data)
+
+            // Read it back based upon the destination schema order
+            val file = new CSVReader().readFile(tempUrl,
+                header = false,
                 config.source.fileAttributes.csvAttributes.delimiter,
                 config.source.schemaProperties.fields.asScala.map(_.name).toList,
                 config.destination.schemaProperties.fields.asScala.map(_.name).toList)
@@ -124,6 +126,8 @@ class SnowflakeLoader(jobContext: JobContext) {
         }
         else {
             // Otherwise, just copy the raw file to the staging bucket
+            val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
+            val fileUrl = files.head
             ObjectStoreUtil.copyBucketObject(ObjectStoreUtil.getBucket(fileUrl),
                 ObjectStoreUtil.getKey(fileUrl),
                 ObjectStoreUtil.getBucket(stageUrl),
@@ -176,15 +180,15 @@ class SnowflakeLoader(jobContext: JobContext) {
 
     private def buildFileFormat(): String = {
         if(config.source.fileAttributes.jsonAttributes != null)
-            "create or replace file format snowflakeloaderfileformat type = 'JSON'"
+            "create or replace file format pipelinefileformat type = 'JSON'"
         else if(config.source.fileAttributes.xmlAttributes != null)
-            "create or replace file format snowflakeloaderfileformat type = 'XML'"
+            "create or replace file format pipelinefileformat type = 'XML'"
         else if(config.source.fileAttributes.csvAttributes != null) {
             val sql = new StringBuilder()
 
             if(config.destination.database.snowflake.keyFields == null) {
                 // Using a parquet file as input, create the parquet options
-                sql.append("create or replace file format snowflakeloaderfileformat type = 'parquet'")
+                sql.append("create or replace file format pipelinefileformat type = 'parquet'")
 
                 // If there aren't any format type options, add SNAPPY as the file compression
                 if(config.destination.database.snowflake.formatTypeOptions == null)
@@ -198,9 +202,7 @@ class SnowflakeLoader(jobContext: JobContext) {
                     else
                         "|"
                 }
-                sql.append("create or replace file format snowflakeloaderfileformat type = 'csv' field_delimiter = '" + delimiter + "'")
-                if(config.source.fileAttributes.csvAttributes.header)
-                    sql.append(" skip_header = 1")
+                sql.append("create or replace file format pipelinefileformat type = 'csv' field_delimiter = '" + delimiter + "'")
             }
 
             // Format options?
@@ -312,9 +314,9 @@ class SnowflakeLoader(jobContext: JobContext) {
 
     private def createFileFormat(): String = {
         if(config.destination.database.snowflake.keyFields != null)
-            " (FILE_FORMAT => 'snowflakeloaderfileformat')"
+            " (FILE_FORMAT => 'pipelinefileformat')"
         else
-            " FILE_FORMAT = (FORMAT_NAME = 'snowflakeloaderfileformat')"
+            " FILE_FORMAT = (FORMAT_NAME = 'pipelinefileformat')"
     }
 
     private def createTableIfUndefined(statement: Statement): Unit = {

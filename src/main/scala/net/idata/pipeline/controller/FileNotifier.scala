@@ -51,32 +51,18 @@ class FileNotifier {
             val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, metadata.dataset)
             if(config == null)
                 throw new PipelineException("Dataset: " + metadata.dataset + " is not configured in the NoSQL database")
-            val fileSize = getFileSize(bucket, key, metadata)
+
+            // Read the data into memory
+            val data = DataUtil.read(bucket, key, config, metadata)
+            statusUtil.info("processing", "Total file size: " + data.size.toString)
 
             statusUtil.info("end", "Process completed successfully")
 
-            JobContext(bucket, key, pipelineToken, metadata, fileSize, config, INITIALIZED, null, statusUtil)
+            JobContext(bucket, key, pipelineToken, metadata, data, config, INITIALIZED, null, statusUtil)
         } catch {
             case e: Exception =>
                 statusUtil.error("end", "Process completed, error: " + Throwables.getStackTraceAsString(e))
                 throw new PipelineException("FileNotifier error: " +Throwables.getStackTraceAsString(e))
         }
-    }
-
-    private def getFileSize(bucket: String, key: String, metadata: DatasetMetadata): Long = {
-        // Get the file size
-        val objectMetadata = ObjectStoreUtil.getObjectMetatadata(bucket, key)
-        val objectSize = {
-            // Bulk file ingestion?
-            if(metadata.dataFilePath != null) {
-                val summaries = ObjectStoreUtil.listSummaries(ObjectStoreUtil.getBucket(metadata.dataFilePath),
-                    ObjectStoreUtil.getKey(metadata.dataFilePath))
-                summaries.map(_.getSize).sum
-            }
-            else
-                objectMetadata.getContentLength
-        }
-        statusUtil.info("processing", "Total file size: " + objectSize.toString)
-        objectSize
     }
 }

@@ -102,7 +102,7 @@ class RedshiftLoader(jobContext: JobContext) {
         else {
             // Convert source files to Parquet
             val stageUrl = "s3://" + PipelineEnvironment.values.environment + "-temp/redshift/" + config.name + "." + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString)
-            ParquetUtil.convertCSVs(stageUrl, config, jobContext.metadata)
+            ParquetUtil.convertCSVs(jobContext.data, stageUrl, config)
             stageUrl
         }
     }

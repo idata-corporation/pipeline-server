@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.model.{DatasetConfig, DatasetMetadata, PipelineEnvironment}
+import net.idata.pipeline.model.{Data, DatasetConfig, PipelineEnvironment}
 import net.idata.pipeline.util.aws.GlueUtil
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -28,35 +28,30 @@ import scala.collection.JavaConverters._
 object ParquetUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-    def convertCSVs(destinationUrl: String, config: DatasetConfig, metadata: DatasetMetadata): Unit = {
+    def convertCSVs(data: Data, destinationUrl: String, config: DatasetConfig): Unit = {
         // Prepare Glue database and table names
         val tempDatabaseName = config.destination.schemaProperties.dbName + "_temp"
         val sourceTempTableName = config.name + "_temp_" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString.replace("-", "")
         Thread.sleep(100)
         val destTempTableName = config.name + "_temp_" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString.replace("-", "")
 
-        // Move the incoming file(s) to a unique path in the -temp bucket
+        // Move the incoming data to a unique path in the -temp bucket
         val tempLocation = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
-        val files = DatasetMetadataUtil.getFiles(metadata)
-        files.foreach(fileUrl => {
-            val tempFilename = config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
-            val tempUrl = tempLocation + tempFilename
-            ObjectStoreUtil.copyBucketObject(
-                ObjectStoreUtil.getBucket(fileUrl),
-                ObjectStoreUtil.getKey(fileUrl),
-                ObjectStoreUtil.getBucket(tempUrl),
-                ObjectStoreUtil.getKey(tempUrl))
-        })
+        val tempFilename = config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
+        val tempUrl = tempLocation + tempFilename
+        ObjectStoreUtil.writeBucketObject(
+            ObjectStoreUtil.getBucket(tempUrl),
+            ObjectStoreUtil.getKey(tempUrl),
+            data.rows.mkString("\n"))
 
         // Create a Glue temp table for the source data (text format)
         GlueUtil.createTable(
             tempDatabaseName,
             sourceTempTableName,
-            config.source.schemaProperties.fields.asScala.toList,
+            config.destination.schemaProperties.fields.asScala.toList,
             null,
             tempLocation,
             fileFormat = "text",
-            config.source.fileAttributes.csvAttributes.header,
             textFileDelimiter = config.source.fileAttributes.csvAttributes.delimiter
         )
 
@@ -64,7 +59,7 @@ object ParquetUtil {
         GlueUtil.createTable(
             tempDatabaseName,
             destTempTableName,
-            config.destination.schemaProperties.fields.asScala.toList,  // NOTE: the destination table has only the destination schema fields
+            config.destination.schemaProperties.fields.asScala.toList,
             null,
             destinationUrl
         )

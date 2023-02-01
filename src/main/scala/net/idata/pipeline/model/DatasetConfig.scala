@@ -22,6 +22,7 @@ case class DatasetConfig(
                             name: String,
                             source: Source,
                             dataQuality: DataQuality,
+                            transformation: Transformation,
                             destination: Destination
                         )
 
@@ -61,6 +62,23 @@ case class ColumnRule(
                          parameter: String,
                          onFailureIsError: Boolean
                      )
+
+case class Transformation(
+                             rowFunctions: java.util.List[RowFunction],
+                             columnFunctions: java.util.List[ColumnFunction]
+                         )
+
+case class RowFunction(
+                          function: String,
+                          parameters: java.util.ArrayList[String]
+                      )
+
+case class ColumnFunction(
+                             columnName: String,
+                             toColumnName: String,
+                             function: String,
+                             parameters: java.util.ArrayList[String]
+                         )
 
 case class FileAttributes(
                              csvAttributes: CsvAttributes,

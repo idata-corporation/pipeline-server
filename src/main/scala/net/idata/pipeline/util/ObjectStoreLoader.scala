@@ -49,18 +49,12 @@ class ObjectStoreLoader(jobContext: JobContext) {
         val databaseName = config.destination.schemaProperties.dbName
         val tableName = config.name
 
-        // Move the file(s) to a unique path in the -temp bucket
+        // Move the data to a unique path in the -temp bucket
         val tempLocation = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
-        val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
-        files.foreach(fileUrl => {
-            val tempFilename = jobContext.config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
-            val tempUrl = tempLocation + tempFilename
-            ObjectStoreUtil.copyBucketObject(
-                ObjectStoreUtil.getBucket(fileUrl),
-                ObjectStoreUtil.getKey(fileUrl),
-                ObjectStoreUtil.getBucket(tempUrl),
-                ObjectStoreUtil.getKey(tempUrl))
-        })
+        val tempFilename = jobContext.config.name + "." +  GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
+        val tempUrl = tempLocation + tempFilename
+        val data = jobContext.data.rows.mkString("\n")
+        ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(tempUrl), ObjectStoreUtil.getKey(tempUrl), data)
 
         val destinationUrl = {
             if(objectStore.destinationBucketOverride != null)
@@ -87,7 +81,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
 
             // Write to temporary location?
             if(objectStore.writeToTemporaryLocation)
-                ParquetUtil.convertCSVs(writeToTempUrl, config, jobContext.metadata)
+                ParquetUtil.convertCSVs(jobContext.data, writeToTempUrl, config)
         }
         finally {
             // Drop the temporary table
@@ -170,11 +164,10 @@ class ObjectStoreLoader(jobContext: JobContext) {
         GlueUtil.createTable(
             tempDatabaseName,
             tempTableName,
-            config.source.schemaProperties.fields.asScala.toList,
+            config.destination.schemaProperties.fields.asScala.toList,
             null,
             tempLocation,
             fileFormat = "text",
-            config.source.fileAttributes.csvAttributes.header,
             textFileDelimiter = config.source.fileAttributes.csvAttributes.delimiter
         )
         (tempDatabaseName, tempTableName)

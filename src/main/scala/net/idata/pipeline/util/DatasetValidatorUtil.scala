@@ -101,6 +101,12 @@ object DatasetValidatorUtil {
             }
         }
 
+        // Transformation
+        if(config.transformation != null) {
+            if(config.source.fileAttributes.csvAttributes == null)
+                throw new PipelineException("A 'transformation' section is only supported for CSV files")
+        }
+
         // Destination object store
         if(config.destination.objectStore != null) {
             if(config.source.fileAttributes.csvAttributes == null)
