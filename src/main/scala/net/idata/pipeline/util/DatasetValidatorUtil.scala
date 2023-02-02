@@ -16,6 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model._
@@ -105,6 +107,14 @@ object DatasetValidatorUtil {
         if(config.transformation != null) {
             if(config.source.fileAttributes.csvAttributes == null)
                 throw new PipelineException("A 'transformation' section is only supported for CSV files")
+            if(config.transformation.rowFunctions != null) {
+                config.transformation.rowFunctions.forEach(function => {
+                    if(function.function.compareTo("javascript") != 0)
+                        throw new PipelineException("For the 'transformation.rowFunctions' section, only 'javascript' functions are currently supported")
+                    if(function.parameters == null)
+                        throw new PipelineException("For the 'transformation.rowFunctions' section, the first 'parameter' must be the name of the javascript file to be processed during transformation")
+                })
+            }
         }
 
         // Destination object store

@@ -16,10 +16,14 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model.{JobContext, PipelineEnvironment, PipelineException}
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import javax.script.ScriptEngineManager
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -39,15 +43,11 @@ class Transformation(jobContext: JobContext) {
                 jobContext
         }
 
-        val jobContextCF = {
-            jobContextRF
-        }
-
         statusUtil.info("end", "Process completed successfully")
-        jobContextCF
+        jobContextRF
     }
 
-    private def runRowFunctions(jobContext: JobContext): JobContext = {
+    private def runRowFunctions(jobContextRF: JobContext): JobContext = {
         // Find the javaScript" function for the data
         val scriptFunction = config.transformation.rowFunctions.asScala.flatMap(rowFunction => {
             if(rowFunction.function.compareToIgnoreCase("javascript") == 0) {
@@ -79,22 +79,24 @@ class Transformation(jobContext: JobContext) {
             }
 
             // Cycle through the rows and run the javascript function
-            val transformed = jobContext.data.rows.map(row => {
+            val transformed = jobContextRF.data.rows.map(row => {
                 val columnMap = RowUtil.getRowAsMap(row, config)
+                println("columnMap: " + columnMap.toString())
                 val changedValues = runScript(columnMap, javascript)
+                println("changedValues: " + changedValues.toString)
 
                 config.destination.schemaProperties.fields.asScala.map(field => {
                     val value = changedValues.get(field.name)
                     if(value == null)
-                        columnMap.getOrElse(field.name, null)
+                        columnMap.getOrElse(field.name, "")
                     else
                         value.toString
                 }).toList
                     .mkString(config.source.fileAttributes.csvAttributes.delimiter)
             })
 
-            val newData = jobContext.data.copy(rows = transformed)
-            jobContext.copy(data = newData)
+            val newData = jobContextRF.data.copy(rows = transformed)
+            jobContextRF.copy(data = newData)
         }
         else
             null
@@ -103,7 +105,14 @@ class Transformation(jobContext: JobContext) {
     private def runScript(columnMap: mutable.ListMap[String, Any], script: String): java.util.HashMap[String, Any] = {
         val engine = new ScriptEngineManager().getEngineByName("JavaScript")
         val bindings = engine.createBindings()
+
+        // Add all of the column key/values as parameters
         columnMap.foreach { case (key, value) => bindings.put(key, value) }
+
+        // Add the _pipelinetimestamp as the last parameter
+        val formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS z")
+        val pipelineTimestamp = formatter.format(new Date(System.currentTimeMillis()))
+        bindings.put("_pipelinetimestamp", pipelineTimestamp)
 
         engine.eval(script, bindings).asInstanceOf[java.util.HashMap[String, Any]]
     }

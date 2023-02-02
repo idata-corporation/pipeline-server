@@ -16,6 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Author(s): Todd Fearn
 */
 
 case class DatasetConfig(
@@ -65,20 +67,13 @@ case class ColumnRule(
 
 case class Transformation(
                              rowFunctions: java.util.List[RowFunction],
-                             columnFunctions: java.util.List[ColumnFunction]
+                             trimColumnWhitespace: Boolean
                          )
 
 case class RowFunction(
                           function: String,
-                          parameters: java.util.ArrayList[String]
+                          parameters: java.util.List[String]
                       )
-
-case class ColumnFunction(
-                             columnName: String,
-                             toColumnName: String,
-                             function: String,
-                             parameters: java.util.ArrayList[String]
-                         )
 
 case class FileAttributes(
                              csvAttributes: CsvAttributes,
