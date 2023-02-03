@@ -79,20 +79,22 @@ class Transformation(jobContext: JobContext) {
             }
 
             // Cycle through the rows and run the javascript function
-            val transformed = jobContextRF.data.rows.map(row => {
+            val transformed = jobContextRF.data.rows.flatMap(row => {
                 val columnMap = RowUtil.getRowAsMap(row, config)
-                println("columnMap: " + columnMap.toString())
                 val changedValues = runScript(columnMap, javascript)
-                println("changedValues: " + changedValues.toString)
-
-                config.destination.schemaProperties.fields.asScala.map(field => {
-                    val value = changedValues.get(field.name)
-                    if(value == null)
-                        columnMap.getOrElse(field.name, "")
-                    else
-                        value.toString
-                }).toList
-                    .mkString(config.source.fileAttributes.csvAttributes.delimiter)
+                if(changedValues != null) {
+                    val row = config.destination.schemaProperties.fields.asScala.map(field => {
+                        val value = changedValues.get(field.name)
+                        if(value == null)
+                            columnMap.getOrElse(field.name, "")
+                        else
+                            value.toString
+                    }).toList
+                        .mkString(config.source.fileAttributes.csvAttributes.delimiter)
+                    Some(row)
+                }
+                else
+                    None
             })
 
             val newData = jobContextRF.data.copy(rows = transformed)
