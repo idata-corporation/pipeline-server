@@ -5,7 +5,6 @@ project/*
 !project/*.sbt
 target/
 build/
-test/
 
 # eclipse
 build
