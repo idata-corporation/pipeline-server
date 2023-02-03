@@ -163,6 +163,9 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	"dataQuality": {
 		"validateFileHeader": false
 	},
+	"transformation": {
+	    "deduplicate": true
+	},
 	"destination": {
 		"database": {
 			"dbName": "DEMO_DB",
@@ -405,6 +408,9 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'Content-Type: application/json' \
 --data-raw '{
 	"name": "stock_price_redshift_filter_col_merge",
+	"transformation": {
+	    "deduplicate": true
+	},
 	"destination": {
 		"database": {
 			"dbName": "dev",
