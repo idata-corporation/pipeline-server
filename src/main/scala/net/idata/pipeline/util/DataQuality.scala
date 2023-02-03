@@ -21,14 +21,12 @@ Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model._
-import org.slf4j.{Logger, LoggerFactory}
 
 import javax.script.ScriptEngineManager
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 class DataQuality(jobContext: JobContext) {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[DataQuality])
     private val config = jobContext.config
     private val statusUtil = jobContext.statusUtil
 
@@ -166,19 +164,19 @@ class DataQuality(jobContext: JobContext) {
         results.foreach { case (onFailureIsError, message) =>
             if (onFailureIsError) {
                 errorCount = errorCount + 1
-                logger.error(message)
+                statusUtil.error("processing", message)
                 if(errorCount > 100)
-                    throw new PipelineException("Aborting processing, more than 100 data quality column rule errors.  Check the log for details")
+                    throw new PipelineException("Aborting processing, more than 100 data quality column rule errors")
             }
             else {
                 warningCount = warningCount + 1
-                logger.warn(message)
+                statusUtil.warn("processing", message)
             }
         }
         if(errorCount > 0)
-            throw new PipelineException("Aborting processing this dataset, " + errorCount.toString + " error(s) were found while performing data quality rules.  Check the log for details")
+            throw new PipelineException("Aborting processing this dataset, " + errorCount.toString + " error(s) were found while performing data quality rules")
         if(warningCount > 0)
-            statusUtil.warn("processing", warningCount.toString + " warning(s) occured while processing this dataset.  Check the log for details")
+            statusUtil.warn("processing", warningCount.toString + " warning(s) occured while processing this dataset")
     }
 
     private def runScript(columnDataMap: mutable.ListMap[String, Any], script: String): String = {

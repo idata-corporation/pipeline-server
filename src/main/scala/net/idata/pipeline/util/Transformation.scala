@@ -100,6 +100,7 @@ class Transformation(jobContext: JobContext) {
             }
 
             // Cycle through the rows and run the javascript function
+            var removed: Long = 0
             val transformed = jobContextRF.data.rows.flatMap(row => {
                 val columnMap = RowUtil.getRowAsMap(row, config)
                 val changedValues = runScript(columnMap, javascript)
@@ -114,11 +115,17 @@ class Transformation(jobContext: JobContext) {
                         .mkString(config.source.fileAttributes.csvAttributes.delimiter)
                     Some(row)
                 }
-                else
+                else {
+                    removed = removed + 1
                     None
+                }
             })
 
-            val newData = jobContextRF.data.copy(rows = transformed)
+            if(removed > 0)
+                statusUtil.info("processing", removed.toString + " rows were removed during the javascript transformation")
+
+            val headerWithSchema = config.destination.schemaProperties.fields.asScala.toList
+            val newData = jobContextRF.data.copy(headerWithSchema = headerWithSchema, rows = transformed)
             jobContextRF.copy(data = newData)
         }
         else

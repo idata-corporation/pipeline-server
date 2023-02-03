@@ -20,17 +20,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Author(s): Todd Fearn
 */
 
-import net.idata.pipeline.model.{Data, DatasetConfig, PipelineEnvironment}
+import net.idata.pipeline.model.{DatasetConfig, JobContext, PipelineEnvironment}
 import net.idata.pipeline.util.aws.GlueUtil
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
 import scala.collection.JavaConverters._
 
 object ParquetUtil {
-    private val logger: Logger = LoggerFactory.getLogger(getClass)
+    def convertCSVs(jobContext: JobContext, destinationUrl: String, config: DatasetConfig): Unit = {
+        val data = jobContext.data
 
-    def convertCSVs(data: Data, destinationUrl: String, config: DatasetConfig): Unit = {
         // Prepare Glue database and table names
         val tempDatabaseName = config.destination.schemaProperties.dbName + "_temp"
         val sourceTempTableName = config.name + "_temp_" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString.replace("-", "")
@@ -46,11 +45,11 @@ object ParquetUtil {
             ObjectStoreUtil.getKey(tempUrl),
             data.rows.mkString("\n"))
 
-        // Create a Glue temp table for the source data (text format)
+        // Create a Glue temp table for the incoming data (text format)
         GlueUtil.createTable(
             tempDatabaseName,
             sourceTempTableName,
-            config.destination.schemaProperties.fields.asScala.toList,
+            data.headerWithSchema,
             null,
             tempLocation,
             fileFormat = "text",
@@ -69,7 +68,7 @@ object ParquetUtil {
         try {
             // Write the parquet data to the Snowflake stage area
             val sql = "INSERT INTO " + tempDatabaseName + "." + destTempTableName + " SELECT " + config.destination.schemaProperties.fields.asScala.map(_.name).mkString(", ") + " FROM " + tempDatabaseName + "." + sourceTempTableName
-            logger.info("AthenUtil sql: " + sql)
+            jobContext.statusUtil.info("processing", "AthenUtil sql: " + sql)
             val outputPath = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + ".out"
             ObjectStoreSQLUtil.sql(tempDatabaseName, sql, outputPath)
         }

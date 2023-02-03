@@ -22,7 +22,8 @@ Author(s): Todd Fearn
 
 case class Data(
                     size: Long,
-                    header: List[String],
-                    rows: List[String],
-                    rawData: String
+                    header: List[String],                   // Contains the header names, only used to validate the header of delimited data
+                    headerWithSchema: List[SchemaField],    // Header SchemaFields, this can evolve as the data moves through the pipeline
+                    rows: List[String],                     // List of rows, only for delimited data
+                    rawData: String                         // Raw data, only for JSON and XML data
                )

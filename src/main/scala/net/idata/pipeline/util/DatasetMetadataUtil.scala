@@ -26,14 +26,11 @@ import net.idata.pipeline.model.{DatasetMetadata, PipelineEnvironment, PipelineE
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.utils.IOUtils
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.{BufferedInputStream, ByteArrayInputStream}
 import scala.util.control.Breaks._
 
-object DatasetMetadataUtil {
-    private val logger: Logger = LoggerFactory.getLogger(getClass)
-
+class DatasetMetadataUtil(statusUtil: StatusUtil) {
     def read(bucket: String, key: String): DatasetMetadata = {
         if(key.endsWith(".metadata.json")) {
             // Read the metadata file and create the DatasetMetadata object
@@ -79,7 +76,7 @@ object DatasetMetadataUtil {
                 .filterNot(_.endsWith("/"))
         }
         else if(metadata.bulkUpload) {
-            logger.info("Bulk file upload")
+            statusUtil.info("processing", "Bulk file upload")
             val keys = ObjectStoreUtil.listObjects(ObjectStoreUtil.getBucket(metadata.dataFilePath), ObjectStoreUtil.getKey(metadata.dataFilePath))
             keys.map(key => "s3://" + ObjectStoreUtil.getBucket(metadata.dataFilePath) + "/" + key)
                 .filterNot(_.endsWith("/"))
@@ -90,10 +87,10 @@ object DatasetMetadataUtil {
     }
 
     private def uncompress(bucket: String, key: String): DatasetMetadata = {
-        logger.info("Uncompressing bucket: " + bucket + ", key: " + key)
+        statusUtil.info("processing","Uncompressing bucket: " + bucket + ", key: " + key)
 
         val (dataset, publisherToken) = parseDatasetPublisherTokenFromKey(key)
-        logger.info("Dataset name: " + dataset)
+        statusUtil.info("processing","Dataset name: " + dataset)
 
         val (inputStream, s3Object) = ObjectStoreUtil.getInputStream(bucket, key)
         val tempWriteDirectory = "s3://" + PipelineEnvironment.values.environment + "-raw/temp/" + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + "/"
@@ -134,7 +131,7 @@ object DatasetMetadataUtil {
                         ! archiveEntry.getName.startsWith("META-INF") &&
                         ! archiveEntry.getName.startsWith("./._"))
                     {
-                        logger.info("Archive file: " + archiveEntry.getName)
+                        statusUtil.info("processing","Archive file: " + archiveEntry.getName)
                         val byteArray = IOUtils.toByteArray(archiveInputStream)
                         writeArchivedFile(byteArray, tempWriteDirectory)
                     }
@@ -161,7 +158,7 @@ object DatasetMetadataUtil {
 
         // Write the temp file name
         val tempFilename = GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
-        logger.info("Writing archive file to : " + writeDirectory + tempFilename)
+        statusUtil.info("processing","Writing archive file to : " + writeDirectory + tempFilename)
         ObjectStoreUtil.writeBucketObjectFromStream(
             ObjectStoreUtil.getBucket(writeDirectory),
             ObjectStoreUtil.getKey(writeDirectory + tempFilename),

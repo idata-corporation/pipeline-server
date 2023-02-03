@@ -2,18 +2,6 @@ echo GET /version
 curl --location --request GET 'http://localhost:8080/version' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
 
-echo GET /datasets
-curl --location --request GET 'http://localhost:8080/datasets' \
---header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
-
-echo GET /dataset?dataset=stock_price_snowflake
-curl --location --request GET 'http://localhost:8080/dataset?dataset=stock_price_snowflake' \
---header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
-
-echo DELETE /dataset - stock_price_snowflake
-curl --location --request DELETE 'http://localhost:8080/dataset?dataset=stock_price_snowflake' \
---header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
-
 echo POST /dataset - stock_price_snowflake
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
@@ -166,13 +154,13 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - stock_price_snowflake_filter_col_merge
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
 --data-raw '{
 	"name": "stock_price_snowflake_filter_col_merge",
 	"dataQuality": {
-		"deduplicate": true,
 		"validateFileHeader": false
 	},
 	"destination": {
@@ -261,7 +249,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
-echo POST stock_price_redshift
+echo POST /dataset - stock_price_redshift
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -324,7 +312,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
-echo stock_price_redshift_filter_col
+echo POST /dataset - stock_price_redshift_filter_col
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -411,6 +399,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - stock_price_redshift_filter_col_merge
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -498,7 +487,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
-
+echo POST /dataset - stock_price_object_store
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -561,6 +550,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - stock_price_object_store_dq
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -610,10 +600,9 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 				"parameter": "^(?:0|[1-9][0-9]*)\\.[0-9]+$"
 			}
 		],
-		"deduplicate": true,
 		"rowRules": [{
 			"function": "javascript",
-			"onFailureIsError": true,
+			"onFailureIsError": false,
 			"parameters": [
 				"stock_price_data_quality.js"
 			]
@@ -628,7 +617,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 			"partitionBy": [
 				"date"
 			],
-			"prefixKey": "rimes/index",
+			"prefixKey": "yahoo/finance",
 			"useIceberg": false,
 			"writeToTemporaryLocation": false
 		}
@@ -680,13 +669,13 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - stock_price_object_store_iceberg
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
 --data-raw '{
 	"name": "stock_price_object_store_iceberg",
 	"dataQuality": {
-		"deduplicate": true,
 		"validateFileHeader": false
 	},
 	"destination": {
@@ -781,14 +770,17 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - stock_price_object_store_iceberg_keys
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
 --data-raw '{
   "name": "stock_price_object_store_iceberg_keys",
   "dataQuality": {
-   "deduplicate": true,
    "validateFileHeader": true
+  },
+  "transformation": {
+    "deduplicate": true
   },
   "destination": {
    "objectStore": {
@@ -855,99 +847,8 @@ curl --location --request POST 'http://localhost:8080/dataset' \
   }
  }'
 
-curl --location --request POST 'http://localhost:8080/dataset' \
---header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
---header 'Content-Type: application/json' \
---data-raw '{
-	"name": "stock_price_snowflake_filter_col_merge",
-	"dataQuality": {
-		"deduplicate": true
-	},
-	"destination": {
-		"database": {
-			"dbName": "DEMO_DB",
-			"schema": "PUBLIC",
-			"snowflake": {
-				"keyFields": [
-					"symbol",
-					"date"
-				],
-				"warehouse": "COMPUTE_WH"
-			},
-			"table": "stock_price_filter_col_merge"
-		},
-		"schemaProperties": {
-			"dbName": "testdb",
-			"fields": [{
-					"name": "symbol",
-					"type": "string"
-				},
-				{
-					"name": "date",
-					"type": "string"
-				},
-				{
-					"name": "open",
-					"type": "double"
-				},
-				{
-					"name": "close",
-					"type": "double"
-				},
-				{
-					"name": "volume",
-					"type": "int"
-				}
-			]
-		}
-	},
-	"source": {
-		"fileAttributes": {
-			"csvAttributes": {
-				"delimiter": ",",
-				"encoding": "UTF-8",
-				"header": true
-			}
-		},
-		"schemaProperties": {
-			"dbName": "testdb",
-			"fields": [{
-					"name": "symbol",
-					"type": "string"
-				},
-				{
-					"name": "date",
-					"type": "string"
-				},
-				{
-					"name": "open",
-					"type": "double"
-				},
-				{
-					"name": "high",
-					"type": "double"
-				},
-				{
-					"name": "low",
-					"type": "double"
-				},
-				{
-					"name": "close",
-					"type": "double"
-				},
-				{
-					"name": "volume",
-					"type": "int"
-				},
-				{
-					"name": "adj_close",
-					"type": "double"
-				}
-			]
-		}
-	}
-}'
 
+echo POST /dataset - stock_price_object_store_transform
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -971,7 +872,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 			"partitionBy": [
 				"date"
 			],
-			"prefixKey": "rimes/index",
+			"prefixKey": "yahoo/finance",
 			"useIceberg": false,
 			"writeToTemporaryLocation": true
 		},
@@ -1067,6 +968,7 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 	}
 }'
 
+echo POST /dataset - parkinglotimage
 curl --location --request POST 'http://localhost:8080/dataset' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' \
 --header 'Content-Type: application/json' \
@@ -1093,4 +995,12 @@ curl --location --request POST 'http://localhost:8080/dataset' \
 
 echo GET /dataset/status
 curl --location --request GET 'http://localhost:8080/dataset/status' \
+--header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
+
+echo GET /datasets
+curl --location --request GET 'http://localhost:8080/datasets' \
+--header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp
+
+echo GET /dataset?dataset=stock_price_snowflake
+curl --location --request GET 'http://localhost:8080/dataset?dataset=stock_price_snowflake' \
 --header 'x-api-key: 1847626a-5b46-4d43-827c-25f323d9201b' | json_pp

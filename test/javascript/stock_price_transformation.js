@@ -1,3 +1,9 @@
+// Sample transformation script
+//
+// input: values for each column using the column name
+// return: null to ignore the row in the resultset, otherwise return a Hashmap of changed columns
+//
+
 // Create a HashMap to hold the changed column values
 // If there are no changes to the column values, return an empty map
 var HashMap = Java.type('java.util.HashMap'); 
@@ -16,7 +22,7 @@ var year = String(date.getFullYear());
 map.put('year', year)
 
 if(symbol == 'FAX') {
-    null;  // To remove a row, return null
+    null;  // remove this row, return null
 }
 else {
 	map;

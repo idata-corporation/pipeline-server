@@ -23,7 +23,6 @@ Author(s): Todd Fearn
 import com.google.gson.Gson
 import net.idata.pipeline.model.{JobContext, Notification, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.util.aws.SecretsManagerUtil
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.{Connection, DriverManager, Statement}
 import java.time.Instant
@@ -31,7 +30,6 @@ import java.util.Properties
 import scala.collection.JavaConverters._
 
 class RedshiftLoader(jobContext: JobContext) {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[RedshiftLoader])
     private val config = jobContext.config
     private val statusUtil = jobContext.statusUtil
     
@@ -65,15 +63,15 @@ class RedshiftLoader(jobContext: JobContext) {
             val properties = new Properties()
             properties.setProperty("user", username)
             properties.setProperty("password", password)
-            logger.info("jdbc url: " + jdbcUrl)
+            statusUtil.info("processing", "jdbc url: " + jdbcUrl)
             conn = DriverManager.getConnection(jdbcUrl, properties)
-            logger.info("Redshift connection acquired")
+            statusUtil.info("processing", "Redshift connection acquired")
             statement = conn.createStatement()
 
             val stageUrl = prepareStagingFile()
 
             if(config.destination.database.truncateBeforeWrite) {
-                logger.info("'truncateTableBeforeWrite' is set to true, truncating table")
+                statusUtil.info("processing", "'truncateTableBeforeWrite' is set to true, truncating table")
                 statement.execute("truncate table " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table)
             }
 
@@ -93,10 +91,9 @@ class RedshiftLoader(jobContext: JobContext) {
     }
 
     private def prepareStagingFile(): String = {
-        val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
-
         // For JSON files ingested, use the original JSON file to load into Redshift
         if(config.source.fileAttributes.jsonAttributes != null) {
+            val files = new DatasetMetadataUtil(jobContext.statusUtil).getFiles(jobContext.metadata)
             if(files.size > 1)
                 throw new PipelineException("Redshift bulk file loading for JSON files is currently unsupported")
             files.head
@@ -104,7 +101,7 @@ class RedshiftLoader(jobContext: JobContext) {
         else {
             // Convert source files to Parquet
             val stageUrl = "s3://" + PipelineEnvironment.values.environment + "-temp/redshift/" + config.name + "." + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString)
-            ParquetUtil.convertCSVs(jobContext.data, stageUrl, config)
+            ParquetUtil.convertCSVs(jobContext, stageUrl, config)
             stageUrl
         }
     }
@@ -130,7 +127,7 @@ class RedshiftLoader(jobContext: JobContext) {
                 " FORMAT AS PARQUET"
             )
         }
-        logger.info("Copy command: " + command.toString())
+        statusUtil.info("processing", "Copy command: " + command.toString())
 
         statement.execute(command.toString())
     }
@@ -153,7 +150,7 @@ class RedshiftLoader(jobContext: JobContext) {
             " FROM '" + stageUrl + "'" +
             " CREDENTIALS '" + "aws_iam_role=" + dbRole + "'" +
             " FORMAT AS PARQUET"
-        logger.info("Copy into temp table command: " + tempSql)
+        statusUtil.info("processing", "Copy into temp table command: " + tempSql)
         statement.execute(tempSql)
 
         // Merge the tables by key fields
@@ -164,7 +161,7 @@ class RedshiftLoader(jobContext: JobContext) {
             sql.append(tableName + "." + keyField + " = " + tempTableName + "." + keyField + " and ")
         })
         sql.setLength(sql.length - 4)
-        logger.info("SQL command to delete existing by key(s): " + sql.mkString)
+        statusUtil.info("processing", "SQL command to delete existing by key(s): " + sql.mkString)
         statement.execute(sql.mkString)
         statement.execute("insert into " + tableName + " select * from " + tempTableName)
         statement.execute("drop table " + tempTableName)
@@ -214,7 +211,7 @@ class RedshiftLoader(jobContext: JobContext) {
         // End
         sql.append(");")
 
-        logger.info("Redshift create table statement: " + sql.mkString)
+        statusUtil.info("processing", "Redshift create table statement: " + sql.mkString)
         statement.execute(sql.mkString)
     }
 
@@ -243,6 +240,6 @@ class RedshiftLoader(jobContext: JobContext) {
         attributes.put("table", config.destination.database.table)
 
         NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
-        logger.info("notification sent: " + jsonNotification)
+        statusUtil.info("processing", "notification sent: " + jsonNotification)
     }
 }

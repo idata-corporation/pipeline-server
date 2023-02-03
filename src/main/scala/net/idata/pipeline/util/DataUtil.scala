@@ -26,8 +26,8 @@ import java.util.regex.Pattern
 import scala.collection.JavaConverters._
 
 object DataUtil {
-    def read(bucket: String, key: String, config: DatasetConfig, metadata: DatasetMetadata): Data = {
-        val files = DatasetMetadataUtil.getFiles(metadata)
+    def read(bucket: String, key: String, config: DatasetConfig, metadata: DatasetMetadata, statusUtil: StatusUtil): Data = {
+        val files = new DatasetMetadataUtil(statusUtil).getFiles(metadata)
         val size = getSize(bucket, key, metadata)
 
         if(config.source.fileAttributes.csvAttributes != null) {
@@ -70,14 +70,17 @@ object DataUtil {
                 }
                 rows
             }
-            Data(size, header, data, null)
+            val headerWithSchema = config.source.schemaProperties.fields.asScala.toList
+            Data(size, header, headerWithSchema, data, null)
         }
         else if(config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null) {
             val fileUrl = files.head
             val rawData = ObjectStoreUtil.readBucketObject(ObjectStoreUtil.getBucket(fileUrl), ObjectStoreUtil.getKey(fileUrl))
                 .getOrElse(throw new PipelineException("Error reading source file: " + fileUrl))
-            Data(size, null, null, rawData)
+            Data(size, null, null, null, rawData)
         }
+        else if(config.source.fileAttributes.unstructuredAttributes != null)
+            Data(size, null, null, null, null)
         else
             null
     }

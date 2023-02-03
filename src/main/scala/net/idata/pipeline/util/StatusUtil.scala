@@ -31,6 +31,7 @@ import java.util.Date
 
 class StatusUtil {
     private val logger: Logger = LoggerFactory.getLogger(classOf[StatusUtil])
+
     private var tableName: String = _
     private var processName: Option[String] = None
     private var pipelineToken: Option[String] = None
@@ -79,39 +80,37 @@ class StatusUtil {
     }
 
     private def send(state: String, code: String, description: String): Unit = {
-        // Only output to the queue if the pipeline token is not null
-        if(this.pipelineToken.isDefined) {
-            state match {
-                case "begin" | "processing" | "end" =>
-                case _ => throw new InvalidParameterException("Invalid state. State must be one of the following: begin, processing, end")
-            }
-            code match {
-                case "info" | "warning" | "error" =>
-                case _ => throw new InvalidParameterException("Invalid code.  Code must be one of the following: info, warning, error")
-            }
-
-            val status = Status(processName.getOrElse(""),
-                publisherToken.getOrElse(""),
-                pipelineToken.getOrElse(""),
-                filename.getOrElse(""),
-                state,
-                code,
-                description)
-
-            writeToNoSQLDb(status)
+        state match {
+            case "begin" | "processing" | "end" =>
+            case _ => throw new InvalidParameterException("Invalid state. State must be one of the following: begin, processing, end")
+        }
+        code match {
+            case "info" | "warning" | "error" =>
+            case _ => throw new InvalidParameterException("Invalid code.  Code must be one of the following: info, warning, error")
         }
 
+        val status = Status(processName.getOrElse(""),
+            publisherToken.getOrElse(""),
+            pipelineToken.getOrElse(""),
+            filename.getOrElse(""),
+            state,
+            code,
+            description)
+
+        writeToNoSQLDb(status)
+
         // Write to the logger
+        val message = pipelineToken.getOrElse("") + ": " + description
         code match {
             case "info" =>
                 if(state.compareTo("processing") == 0)
-                    logger.info(description)
+                    logger.info(message)
             case "warning" =>
                 if(state.compareTo("processing") == 0)
-                    logger.warn(description)
+                    logger.warn(message)
             case "error" =>
                 if(state.compareTo("processing") == 0)
-                    logger.error(description)
+                    logger.error(message)
         }
     }
 

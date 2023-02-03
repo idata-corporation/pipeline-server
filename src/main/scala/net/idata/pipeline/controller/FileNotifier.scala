@@ -39,7 +39,7 @@ class FileNotifier {
             val pipelineToken = GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString
             statusUtil.setPipelineToken(pipelineToken)
 
-            val metadata = DatasetMetadataUtil.read(bucket, key)
+            val metadata = new DatasetMetadataUtil(statusUtil).read(bucket, key)
             statusUtil.setFilename(metadata)
             statusUtil.setPublisherToken(metadata.publisherToken)
 
@@ -55,7 +55,7 @@ class FileNotifier {
                 throw new PipelineException("Dataset: " + metadata.dataset + " is not configured in the NoSQL database")
 
             // Read the data into memory
-            val data = DataUtil.read(bucket, key, config, metadata)
+            val data = DataUtil.read(bucket, key, config, metadata, statusUtil)
             statusUtil.info("processing", "Total file size: " + data.size.toString)
 
             statusUtil.info("end", "Process completed successfully")

@@ -23,13 +23,11 @@ Author(s): Todd Fearn
 import com.google.gson.Gson
 import net.idata.pipeline.model.{JobContext, Notification, PipelineEnvironment}
 import net.idata.pipeline.util.aws.{GlueUtil, IcebergUtil}
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
 import scala.collection.JavaConverters._
 
 class ObjectStoreLoader(jobContext: JobContext) {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[ObjectStoreLoader])
     private val config = jobContext.config
     private val objectStore = config.destination.objectStore
     private val statusUtil = jobContext.statusUtil
@@ -83,7 +81,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
 
             // Write to temporary location?
             if(objectStore.writeToTemporaryLocation)
-                ParquetUtil.convertCSVs(jobContext.data, writeToTempUrl, config)
+                ParquetUtil.convertCSVs(jobContext, writeToTempUrl, config)
         }
         finally {
             // Drop the temporary table
@@ -113,7 +111,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
         // Delete the existing data first?
         deleteBeforeWrite(baseDestinationUrl)
 
-        val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
+        val files = new DatasetMetadataUtil(statusUtil).getFiles(jobContext.metadata)
         files.foreach(fileUrl => {
             val filename = {
                 if(config.source.fileAttributes.unstructuredAttributes.preserveFilename)
@@ -232,6 +230,6 @@ class ObjectStoreLoader(jobContext: JobContext) {
         attributes.put("destination", "objectStore")
 
         NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
-        logger.info("notification sent: " + jsonNotification)
+        statusUtil.info("processing", "notification sent: " + jsonNotification)
     }
 }

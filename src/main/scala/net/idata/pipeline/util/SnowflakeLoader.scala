@@ -25,7 +25,6 @@ import net.idata.pipeline.model._
 import net.idata.pipeline.util.aws.SecretsManagerUtil
 import net.snowflake.client.core.QueryStatus
 import net.snowflake.client.jdbc.{SnowflakeResultSet, SnowflakeStatement}
-import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement}
 import java.time.Instant
@@ -33,7 +32,6 @@ import java.util.Properties
 import scala.collection.JavaConverters._
 
 class SnowflakeLoader(jobContext: JobContext) {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[SnowflakeLoader])
     private val config = jobContext.config
     private val statusUtil = jobContext.statusUtil
 
@@ -70,7 +68,7 @@ class SnowflakeLoader(jobContext: JobContext) {
             properties.setProperty("db", config.destination.database.dbName)
             properties.setProperty("schema", config.destination.database.schema)
             conn = DriverManager.getConnection(jdbcUrl, properties)
-            logger.info("Snowflake connection acquired")
+            statusUtil.info("processing", "Snowflake connection acquired")
             statement = conn.createStatement()
 
             if(!config.destination.database.manageTableManually)
@@ -101,13 +99,13 @@ class SnowflakeLoader(jobContext: JobContext) {
     }
 
     private def prepareParquetStagingFile(stageUrl: String): Unit = {
-        logger.info("Preparing parquet staging file(s) at location: " + stageUrl)
+        statusUtil.info("processing", "Preparing parquet staging file(s) at location: " + stageUrl)
 
-        ParquetUtil.convertCSVs(jobContext.data, stageUrl, config)
+        ParquetUtil.convertCSVs(jobContext, stageUrl, config)
     }
 
     private def prepareCsvStagingFile(stageUrl: String): String = {
-        logger.info("Preparing CSV staging file at location: " + stageUrl)
+        statusUtil.info("processing", "Preparing CSV staging file at location: " + stageUrl)
 
         // If the incoming file is a CSV read the file and filter out the header and appropriate columns based upon the destination schema
         if(config.source.fileAttributes.csvAttributes != null) {
@@ -128,7 +126,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         }
         else {
             // Otherwise, just copy the raw file to the staging bucket
-            val files = DatasetMetadataUtil.getFiles(jobContext.metadata)
+            val files = new DatasetMetadataUtil(statusUtil).getFiles(jobContext.metadata)
             val fileUrl = files.head
             ObjectStoreUtil.copyBucketObject(ObjectStoreUtil.getBucket(fileUrl),
                 ObjectStoreUtil.getKey(fileUrl),
@@ -151,12 +149,12 @@ class SnowflakeLoader(jobContext: JobContext) {
         statement.execute("USE SCHEMA " + config.destination.database.schema)
 
         if(config.destination.database.truncateBeforeWrite) {
-            logger.info("'truncateTableBeforeWrite' is set to true, truncating table")
+            statusUtil.info("processing", "'truncateTableBeforeWrite' is set to true, truncating table")
             statement.execute("truncate table " + config.destination.database.table)
         }
 
         val fileFormat = buildFileFormat()
-        logger.info("File format SQL command: " + fileFormat)
+        statusUtil.info("processing","File format SQL command: " + fileFormat)
         statement.executeUpdate(fileFormat)
 
         // Override?
@@ -176,7 +174,7 @@ class SnowflakeLoader(jobContext: JobContext) {
                     buildCopy(stageUrl, stageName)
             }
         }
-        logger.info("SQL command: " + sql)
+        statusUtil.info("processing","SQL command: " + sql)
         statement.executeUpdate(sql)
     }
 
@@ -383,8 +381,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         // End
         sql.append(");")
 
-        statusUtil.info("processing", "Table does not exist, creating table: " + tableName)
-        logger.info("Snowflake create table statement: " + sql.mkString)
+        statusUtil.info("processing", "Table does not exist, creating table: " + sql.mkString)
         statement.execute(sql.mkString)
     }
 
@@ -431,6 +428,6 @@ class SnowflakeLoader(jobContext: JobContext) {
         attributes.put("table", config.destination.database.table)
 
         NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
-        logger.info("notification sent: " + jsonNotification)
+        statusUtil.info("processing", "notification sent: " + jsonNotification)
     }
 }

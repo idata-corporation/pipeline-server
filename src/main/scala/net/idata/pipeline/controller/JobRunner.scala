@@ -23,11 +23,8 @@ Author(s): Todd Fearn
 import com.google.common.base.Throwables
 import net.idata.pipeline.model.{JobContext, PipelineException}
 import net.idata.pipeline.util._
-import org.slf4j.{Logger, LoggerFactory}
 
 class JobRunner(jobContext: JobContext) extends Runnable {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[JobRunner])
-
     def run(): Unit = {
         val config = jobContext.config
         val statusUtil = jobContext.statusUtil
