@@ -31,6 +31,12 @@ object DataUtil {
         val size = getSize(bucket, key, metadata)
 
         if(config.source.fileAttributes.csvAttributes != null) {
+            val trimColumns = {
+                if(config.transformation != null && config.transformation.trimColumnWhitespace)
+                    true
+                else
+                    false
+            }
             var header: List[String] = null
             val data = files.zipWithIndex.flatMap { case (fileUrl, index) =>
                 val rows = {
@@ -39,7 +45,8 @@ object DataUtil {
                             config.source.fileAttributes.csvAttributes.header,
                             config.source.fileAttributes.csvAttributes.delimiter,
                             config.source.schemaProperties.fields.asScala.map(_.name).toList,
-                            config.source.schemaProperties.fields.asScala.map(_.name).toList)
+                            config.source.schemaProperties.fields.asScala.map(_.name).toList,
+                            trimColumns = trimColumns)
                             .split("\n")
                             .toList
                         if(config.source.fileAttributes.csvAttributes.header) {
@@ -55,6 +62,7 @@ object DataUtil {
                             config.source.fileAttributes.csvAttributes.delimiter,
                             config.source.schemaProperties.fields.asScala.map(_.name).toList,
                             config.source.schemaProperties.fields.asScala.map(_.name).toList,
+                            trimColumns = trimColumns,
                             removeHeader = true)
                             .split("\n")
                             .toList

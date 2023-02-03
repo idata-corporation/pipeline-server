@@ -46,7 +46,6 @@ case class SchemaProperties(
 
 case class DataQuality(
                           validateFileHeader: Boolean,
-                          deduplicate: Boolean,
                           validationSchema: String,
                           rowRules: java.util.ArrayList[RowRule],
                           columnRules: java.util.List[ColumnRule]
@@ -66,8 +65,9 @@ case class ColumnRule(
                      )
 
 case class Transformation(
-                             rowFunctions: java.util.List[RowFunction],
-                             trimColumnWhitespace: Boolean
+                             trimColumnWhitespace: Boolean,
+                             deduplicate: Boolean,
+                             rowFunctions: java.util.List[RowFunction]
                          )
 
 case class RowFunction(

@@ -37,19 +37,15 @@ class JobRunner(jobContext: JobContext) extends Runnable {
             statusUtil.info("begin", "Process started")
 
             // Do data quality?
-            val jobContextDQ = {
-                if(config.dataQuality != null)
-                    new DataQuality(jobContext).process()
-                else
-                    jobContext
-            }
+            if(config.dataQuality != null)
+                new DataQuality(jobContext).process()
 
             // Transformations?
             val jobContextTransform = {
                 if(config.transformation != null)
-                    new Transformation(jobContextDQ).process()
+                    new Transformation(jobContext).process()
                 else
-                    jobContextDQ
+                    jobContext
             }
 
             if(config.destination.objectStore != null)

@@ -36,15 +36,36 @@ class Transformation(jobContext: JobContext) {
         statusUtil.overrideProcessName(this.getClass.getSimpleName)
         statusUtil.info("begin", "Process started")
 
-        val jobContextRF = {
-            if(config.transformation.rowFunctions != null)
-                runRowFunctions(jobContext)
+        val jobContextDD = {
+            if(config.transformation.deduplicate)
+                deduplicate(jobContext)
             else
                 jobContext
         }
 
+        val jobContextRF = {
+            if(config.transformation.rowFunctions != null)
+                runRowFunctions(jobContextDD)
+            else
+                jobContextDD
+        }
+
         statusUtil.info("end", "Process completed successfully")
         jobContextRF
+    }
+
+    private def deduplicate(jobContext: JobContext): JobContext = {
+        statusUtil.info("processing", "Running deduplication")
+
+        val distinct = jobContext.data.rows.distinct
+        val deduped = jobContext.data.rows.size - distinct.size
+        if(deduped > 0) {
+            statusUtil.info("processing", deduped.toString + " rows were duplicates and removed")
+            val newData = jobContext.data.copy(rows = distinct)
+            jobContext.copy(data = newData)
+        }
+        else
+            jobContext
     }
 
     private def runRowFunctions(jobContextRF: JobContext): JobContext = {

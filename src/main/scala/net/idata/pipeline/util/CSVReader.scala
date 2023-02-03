@@ -25,7 +25,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser}
 import scala.collection.JavaConverters._
 
 class CSVReader {
-    def readFile(url: String, header: Boolean, delimiter: String, columnList: List[String], columnFilter: List[String], removeHeader: Boolean = false): String = {
+    def readFile(url: String, header: Boolean, delimiter: String, columnList: List[String], columnFilter: List[String], trimColumns: Boolean = false, removeHeader: Boolean = false): String = {
         // Determine the column #'s to read
         val columnNumbers = columnFilter.flatMap(filteredColumn => {
             columnList.zipWithIndex.flatMap { case (column, index) =>
@@ -38,7 +38,7 @@ class CSVReader {
 
         // Read the file using Apache commons-csv
         val (bufferedReader, s3Object) = ObjectStoreUtil.getBufferedReader(ObjectStoreUtil.getBucket(url), ObjectStoreUtil.getKey(url))
-        val parser = new CSVParser(bufferedReader, CSVFormat.RFC4180.builder().setDelimiter(delimiter).setIgnoreEmptyLines(true).build())
+        val parser = new CSVParser(bufferedReader, CSVFormat.RFC4180.builder().setDelimiter(delimiter).setIgnoreEmptyLines(true).setTrim(trimColumns).build())
 
         // Get only the columns in the column filter
         val rows = parser.getRecords.asScala.map(record => {

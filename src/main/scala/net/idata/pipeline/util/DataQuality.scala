@@ -32,7 +32,7 @@ class DataQuality(jobContext: JobContext) {
     private val config = jobContext.config
     private val statusUtil = jobContext.statusUtil
 
-    def process(): JobContext = {
+    def process(): Unit = {
         statusUtil.overrideProcessName(this.getClass.getSimpleName)
         statusUtil.info("begin", "Process started")
 
@@ -61,24 +61,15 @@ class DataQuality(jobContext: JobContext) {
                 SchemaValidationUtil.validateXml(jobContext.data.rawData, schemaFileUrl)
         }
 
-        // Dedup data?
-        val jobContextDQ = {
-            if(config.dataQuality.deduplicate)
-                deduplicate(jobContext)
-            else
-                jobContext
-        }
-
         // Row rules?
         if(config.dataQuality.rowRules != null)
-            runRowRules(jobContextDQ.data.rows)
+            runRowRules(jobContext.data.rows)
 
         // Column rules?
         if(config.dataQuality.columnRules != null)
-            runColumnRules(jobContextDQ.data.rows)
+            runColumnRules(jobContext.data.rows)
 
         statusUtil.info("end", "Process completed successfully")
-        jobContextDQ
     }
 
     private def validateHeader(header: List[String], config: DatasetConfig): Unit = {
@@ -88,20 +79,6 @@ class DataQuality(jobContext: JobContext) {
             if(schemaField.name.compareToIgnoreCase(column) != 0)
                 throw new PipelineException("The incoming header on the data file does not match the destination schema for dataset: " + config.name + ", failed comparing column: " + column + " with source schema field: " + schemaField.name)
         }
-    }
-
-    private def deduplicate(jobContext: JobContext): JobContext = {
-        statusUtil.info("processing", "Running deduplication")
-
-        val distinct = jobContext.data.rows.distinct
-        val deduped = jobContext.data.rows.size - distinct.size
-        if(deduped > 0) {
-            statusUtil.info("processing", deduped.toString + " rows were duplicates and removed")
-            val newData = jobContext.data.copy(rows = distinct)
-            jobContext.copy(data = newData)
-        }
-        else
-            jobContext
     }
 
     private def runRowRules(rows: List[String]): Unit = {

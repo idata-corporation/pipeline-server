@@ -77,8 +77,6 @@ object DatasetValidatorUtil {
         if(config.dataQuality != null) {
             if(config.dataQuality.validateFileHeader && config.source.fileAttributes.csvAttributes == null)
                 throw new PipelineException("In the 'dataQuality' section, 'validateFileHeader' = true is only valid for delimited (CSV) files")
-            if(config.dataQuality.deduplicate && config.source.fileAttributes.csvAttributes == null)
-                throw new PipelineException("In the 'dataQuality' section, 'deduplicate' = true is only valid for delimited (CSV) files")
             if(config.dataQuality.validationSchema != null) {
                 if(config.source.fileAttributes.jsonAttributes == null && config.source.fileAttributes.xmlAttributes == null)
                     throw new PipelineException("In the 'dataQuality' section, 'validationSchema' is only valid for JSON or XML files")
