@@ -48,25 +48,21 @@ resource "aws_s3_bucket_notification" "raw_notification" {
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".metadata.json"
   }
-
   queue {
     queue_arn     = aws_sqs_queue.file_notifier.arn
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".dataset.csv"
   }
-
   queue {
     queue_arn     = aws_sqs_queue.file_notifier.arn
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".dataset.json"
   }
-
   queue {
     queue_arn     = aws_sqs_queue.file_notifier.arn
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".dataset.xml"
   }
-
   queue {
     queue_arn     = aws_sqs_queue.file_notifier.arn
     events        = ["s3:ObjectCreated:*"]
@@ -86,5 +82,25 @@ resource "aws_s3_bucket_notification" "raw_notification" {
     queue_arn     = aws_sqs_queue.file_notifier.arn
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".dataset.pdf"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.zip"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.gz"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.tar"
+  }
+  queue {
+    queue_arn     = aws_sqs_queue.file_notifier.arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".dataset.jar"
   }
 }

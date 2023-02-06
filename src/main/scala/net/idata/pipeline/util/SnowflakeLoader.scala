@@ -122,16 +122,18 @@ class SnowflakeLoader(jobContext: JobContext) {
                 config.destination.schemaProperties.fields.asScala.map(_.name).toList)
 
             // Write the file to the stage
-            ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(stageUrl), ObjectStoreUtil.getKey(stageUrl), file)
+            val stageUrlWithFile = stageUrl + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".csv"
+            ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(stageUrlWithFile), ObjectStoreUtil.getKey(stageUrlWithFile), file)
         }
         else {
             // Otherwise, just copy the raw file to the staging bucket
             val files = new DatasetMetadataUtil(statusUtil).getFiles(jobContext.metadata)
             val fileUrl = files.head
+            val stageUrlWithFile = stageUrl + GuidV5.nameUUIDFrom(System.currentTimeMillis().toString).toString + ".tmp"
             ObjectStoreUtil.copyBucketObject(ObjectStoreUtil.getBucket(fileUrl),
                 ObjectStoreUtil.getKey(fileUrl),
-                ObjectStoreUtil.getBucket(stageUrl),
-                ObjectStoreUtil.getKey(stageUrl))
+                ObjectStoreUtil.getBucket(stageUrlWithFile),
+                ObjectStoreUtil.getKey(stageUrlWithFile))
         }
 
         stageUrl
