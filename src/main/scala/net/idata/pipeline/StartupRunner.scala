@@ -70,7 +70,7 @@ class StartupRunner extends ApplicationRunner {
                 null
         }
 
-        val snowflakeEnvironment = PipelineEnvironment(
+        val pipelineEnvironment = PipelineEnvironment(
             environment,
             region,
             fileNotifierQueue,
@@ -85,6 +85,6 @@ class StartupRunner extends ApplicationRunner {
             redshiftSecretName
         )
 
-        PipelineEnvironment.init(snowflakeEnvironment)
+        PipelineEnvironment.init(pipelineEnvironment)
     }
 }

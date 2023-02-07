@@ -20,15 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Author(s): Todd Fearn
 */
 
-case class Notification(
-                           dataset: String,
-                           publisherToken: String,
-                           pipelineToken: String,
-                           destination: String,
-                           prefixKey: String,
-                           objectStoreUrl: String,
-                           objectStoreTemporaryUrl: String,
-                           schema: String,
-                           database: String,
-                           table: String
-                       )
+case class SparkJobProperties(
+                                 sourceUrl: String,
+                                 destinationUrl: String,
+                                 jobContext: JobContext,
+                                 pipelineEnvironment: PipelineEnvironment
+                             )

@@ -1,4 +1,4 @@
 Release Notes
 
 0.5.0
-01-20-2023 - First release
+01-20-2023 - First open source release, migrated from 2 years worth of data pipeline development efforts using AWS
