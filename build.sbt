@@ -14,10 +14,10 @@
  limitations under the License.
  */
 
-name := "pipeline-os"
+name := "pipeline-server"
 ThisBuild / organization := "net.idata"
 ThisBuild / scalaVersion := "2.12.17"
-ThisBuild / version := "0.5.0"
+ThisBuild / version := "2.3.0"
 
 lazy val root = (project in file(".")).
     enablePlugins(BuildInfoPlugin).

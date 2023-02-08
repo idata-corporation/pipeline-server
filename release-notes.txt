@@ -1,4 +1,241 @@
 Release Notes
 
-0.5.0
-01-20-2023 - First open source release, migrated from 2 years worth of data pipeline development efforts using AWS
+v0.90
+03-04-2021 - First commit
+
+v1.00
+04-07-2021	- Removed child config "transform" section dependency
+04-08-2021  - Snowflake loader did not support multiple CSV files, fixed this issue
+04-09-2021  - Status-Child lambda, forcing the process name 'deltadelete' to be changed to 'DCU Delete'
+04-16-2021  - CsvToParquet spark job, added a column function named edptimestamp.  Can now derive columns from the edptimestamp field.
+
+v1.01
+05-05-2021  - Added support for avro file types, changed the dispatcher queues to FIFO with support from the file-notifier
+05-12-2021  - Bug fix, support for avro file destination types
+
+v1.02
+05-18-2021  - When a new Glue database is created, I added the prefixKey to the database parameters for Collibra team to use to identify the source of the data
+05-21-2020  - Fixed an issue where data was being written with "" instead of nulls
+05-24-2021  - Added support for Snowflake MERGE INTO commands.  Modified the checks for the child config for the database section to support MERGE INTO
+05-26-2021  - SnowflakeLoader, added support for multiple keys on MERGE INTO commands
+05-26-2021  - Moved the code base back to SecretsManager for RDS username/password, fixed bug with Notify lambda not finding the path for SQS
+05-28-2021  - Removed sourceFileAttributes in the datasetConfig.database section
+06-03-2021  - Added a Snowflake 'copy all' concept where the SnowflakeLoader will load all data from a raw-plus bucket into a Snowflake table
+
+v1.03
+06-04-2021  - Added a retry to the CsvToParquet Athena repair table call
+
+v1.04
+06-04-2021  - For delta configurations, if the metadata 'writeMode' flag is set to 'overwrite', now deleting all ./parquet files for the child
+06-08-2021  - Added support for the ingestion of parquet files into raw
+06-09-2021  - SnowflakeLoader, added support for a file format parameter of fieldOptionallyEnclosedBy
+06-09-2021  - Changed the SnowflakeLoader for copy all data to use the staging bucket instead of S3 to copy all of the parquet data to a Snowflake table
+06-10-2021  - Fixed a bug where timestamp nanosecond fields were being truncated when written to a temp file used for the SnowflakeLoader
+06-10-2021  - Added the EDP-Version in the response headers of all REST API methods
+06-11-2021  - Removed dependencies on the 'file' and 'className' values in the JSON configuration file.  Dynamically building them now
+06-11-2021  - Renamed CsvToParquet module and all associated files to Transform
+
+v1.05
+06-15-2021  - Added support for --py-files option in the Spark Executor Lambda for support on the optimized layer for python
+06-16-2021  - When registering an optimized child, if className is null because it is a python job, set the className to blank to support the Step Function
+06-17-2021  - Fixed bugs with running pyspark jobs in the Optimized pipeline.  Added jars, conf and pyfiles parameters for the OptimizedDatasetConfig
+06-22-2021  - Changed all classnames to net.idata.edp... from com.idata.edl..., fixed a bug with the file validator header validation
+06-24-2021  - Added DMC to the SnowflakeLoader
+06-25-2021  - Fixed a database sqlOverride bug with appending the stage to the sql.  Snowflake, added optional ESCAPE value to the CREATE OR REPLACE FILE FORMAT
+06-25-2021  - Added the EDP version to the input of the Athena and Spark step functions
+06-25-2021  - For the Optimize pipeline, bug fix for the parameters to the Step Function, for spark-executor null or blank className, jars, conf and pyFiles are handled properly
+
+v1.06
+06-28-2021  - Bugfix in the optimize-pipeline-api, if 'className, jars, conf or pyFiles' are null, set them to blank to support the step function execution
+06-29-2021  - Added a 'deleteBeforeWrite' option in the child configuration to force a full deletion of a raw-plus child before writing
+06-29-2021  - Optimize-Notifier had a bug where it was sending errors to the Notify queue and a circular pattern was occurring
+
+v1.07
+06-30-2021  - Dispatcher lambda, on Exception moved the status message before the SQS message delete.  Transform repair table, instead of throwing an Exception, sending a status message
+06-30-2021  - Added a 'deleteBeforeWrite' option in the metadata to force a full deletion of a raw-plus child before writing
+
+v1.08
+07-12-2021 - Removed a dependency on the Transform section of the DatasetConfig model.  Can now configure to move data to a database only.
+07-12-2021 - Removed the creation of Glue tables if the DatasetConfig.transform section is not present
+07-12-2021 - Changed the file validator to compare against the DatasetConfig source columns instead of the source Glue table columns
+07-13-2021 - Added a notification to the Snowflake and Redshift loaders
+
+v1.09
+07-13-2021 - Added an API endpoint and Lambda to trigger an Optimized Dataset EMR job
+07-13-2021 - Fixed a bug in the dispatcher FIFO queue logic where messages were not being added back to the queue
+
+v1.10
+07-15-2021 - Added the child name to the prefix of the step function name for all datasets, not just upsert datasets
+07-20-2021 - For API /snowflake/copyall, fixed a column reordering issue. Also fixed a bug where /snowflake/copyall needed JSON datasets to be written to stage as parquet instead of CSV
+
+v1.11
+07-26-2021 - For Snowflake ingestion, now re-ordering the columns based upon the Glue destination schema
+
+v1.13
+07-28-2021 - Fixed an S3 read object bug, now closing the s3object to prevent the problem
+07-28-2021 - Fixed a bug when writing a temporary file for database ingestion
+
+v1.14
+07-30-2021 - Bug fix for the Dispatcher lambda. Lambda was not peeking at all messages in the SQS queue to determine joe execution
+07-30-2021 - Bug fix Dispatcher, now adding back the messages not processed at the end of the Lambda execution to prevent an un-ending loop
+
+v1.15
+07-31-2021 - Bug fix Dispatcher, when a step function was not started for a job, the message was not being properly put back into the FIFO queue
+
+v1.17
+08-04-2021  - Bug fix, when writing Snowflake staging file, the Glue deleted columns were not being included in the staging file
+
+v1.18
+08-05-2021 - Bug fix, when writing Snowflake staging file, columns with linefeeds were causing problems.  Made a change to the creation of the CSV to fix
+
+v1.19
+08-09-2021 - Bug fix, when performing a /copyall data from trusted to Snowflake, the dataframe was not reading all of the parquet data.  Now fixed.
+08-09-2021 - Bug fix, when performing a /copyall data from trusted to Snowflake, added the .mergeSchema option to force the loading of all parquet data into the dataframe
+
+v1.20
+08-11-2021 - Bug fix for Snowflake data loading, made a change to support uploading parquet files from the staging area to Snowflake.  This avoids delimiter issues when uploading only CSVs
+08-11-2021 - Removed all config.database execution logic temporarily
+
+v1.21
+08-11-2021 - Added back all config.database execution logic
+
+v1.22
+08-11-2021 - Bug fix, Snowflake loader, fixed a COPY INTO bug where it was not including previously deleted fields in the statement
+
+v1.23
+08-12-2021 - SnowflakeLoader enhancement, writing many stage files to enhance the performance of the Snowflake load
+08-13-2021 - Cleanup of un-used classes
+08-30-2021 - Dispatcher, more efficiently retrieving this list of step functions which may avoid a Lambda timeout issue
+
+v1.24
+09-01-2021 - Added source file attribute encoding to support incoming charset encoding
+09-01-2021 - Now supporting string fields with "" inside a string for Spark.read.csv
+
+v1.25
+09-08-2021 - Fixed a bug where optimized datasets do not contain children and the BYOL job was not triggering
+
+v1.26
+09-10-2021 - Bug fix, v1.24 change created a bug with the incoming CSV file read with header
+09-10-2021 - Bug fix, config.transform.deleteBeforeWrite now checks if any files exist to be deleted before deleting
+09-10-2021 - For the SnowflakeLoader, added a USE dbname command before COPY INTO or MERGE INTO commands
+
+v1.27
+09-13-2021 - For the SnowflakeLoader, added USE WAREHOUSE and USE SCHEMA before COPY INTO or MERGE INTO commands
+
+v1.28
+09-14-2021 - For the Transform, removed the .option(quote, ...) on a CSV raw file read, no longer needed
+09-14-2021 - The config transform.deleteBeforeWrite now only works on non-delta datasets
+
+v1.29
+09-20-2021 - Added a sourceFileAttributes.additionalSparkReadOptions to the JSON configuration which is a map that can be used to add additional spark read options
+
+v1.30
+09-20-2021 - Provided a status-child Lambda update to change the 'systemName' to the 'SystemName' inside of the message 'description' field, if 'SystemName' exists
+
+v1.40
+10-04-2021 - Initial support for Databricks as the spark cluster, all except BYOL and the DeltaDelete state machines
+10-04-2021 - Initial support for EKS EMR as the spark cluster
+10-12-2021 - Moved the child landing notifications to SNS from SQS.  Removed the Notify lambda (no longer needed) and associated chain
+10-13-2021 - Added a Status Lambda environment boolean flag to turn on/off database logging
+
+v2.00.00
+10-20-2021 - Reworked from IData Enterprise Data Pipeline (EDP) as Kubernetes instead of multiple lambda microservices
+10-27-2021 - Removed all Freddie Mac specific modules and code
+10-29-2021 - Transform, reordered columns according to the destination schema before writing to parquet
+10-29-2021 - Transform, refactored the sparkSession config to only include the minimum and Delta configurations
+
+v2.00.01
+11-16-2021 - Added an API endpoint to push files to raw and also retrieve files once delivered to their destination in S3
+12-23-2021 - Removed the Status lambda and moved functionality to pipelineserver
+
+v2.1.0
+12-24-2021 - Added a 'trigger' concept, that will kick off a Spark job when certain datasets are delivered
+12-24-2021 - Added new API 'trigger' endpoints
+12-28-2021 - Created another type of trigger where a cron string can be set to trigger a Spark job
+12-30-2021 - Added a logger to the TriggerTemplate, and API calls for /trigger/status read and write
+
+v2.1.1
+01-03-2021 - Added a Subscription API
+01-04-2021 - Added a small, medium and large configuration to the spark EKS EMR properties
+01-06-2022 - Fixed a bug with deleted fields, no longer moving to the end after _pipelineToken
+
+v2.1.2
+01-06-2022 - Fixed a bug with old vs new schema comparisons, the location was always wrong for Delta datasets and generated a new schema on every registration
+01-06-2022 - Fixed a bug when checking for existing Delta dataset data
+01-06-2022 - Fixed a bug with the API call to get all SNS subscriptions
+01-07-2022 - Changed the Subscription API to only use the SNS Notification topic
+
+v2.1.3
+01-20-2022 - Fixed a bug in the SNS add subscription regarding multiple attributes
+01-21-2022 - Added parameters to the Trigger object to be passed to the Trigger at runtime
+
+v2.1.4
+01-24-2022 - Added support for raw file ingestion of zip, tar, and jar files
+01-26-2022 - Added support for raw file ingestion of xls files
+01-28-2022 - Added support for .gz files
+
+v2.1.5
+02-01-2022 - Added a staging bucket and staging queues to support AWS Data Exchange files being dropped
+02-03-2022 - Added field _pipelinetoken to the transformed data and the destination glue tables
+02-04-2022 - Removed the _edpTimestamp field from the transformed data and the destination glue tables
+
+v2.1.6
+02-05-2022 - Added a python trigger template example
+
+v2.2.0
+02-10-2022 - Rearranged the DatasetConfig class to setup a single transformation concept
+02-11-2022 - Support for no source schema and translation of the incoming data to the destination schema field data types
+02-12-2022 - Supporting JSON and XML files as single column string objects in parquet
+02-14-2022 - Fixed a bug with the a JSON dataset GET /dataset/data with a pipeline token, removed the header
+02-15-2022 - Added Snowflake table loading capability
+02-16-2022 - Data quality enhancements for regular expressions
+02-17-2022 - Added a preprocess dataset configuration to enable preprocessing a dataset prior to transformation
+02-18-2022 - Added a Delta dataset option for non-keyed datasets
+02-21-2022 - Added Redshift table loading capability
+05-04-2022 - Bug fix for S3 retrieving more than 1000 objects at one time
+05-10-2022 - Added a feature to support delta datasets without an index
+05-10-2022 - Bug fix for the xls reader was not retrieving the last row of the file
+05-10-2022 - When determining if delta data exists before writing, retrieving only the first page of keys speeding up the process
+
+v2.2.1
+06-10-2022 - Added rowFunctions that support javascript scripts to run against each row and return changes to the row
+06-15-2022 - Bug fix for Redshift create table if not exists. Converted field types from Glue to proper Redshift data types
+06-15-2022 - Bug fix in exceltocsv utility where it was adding an extra delimiter to the temporary file
+
+v2.2.2
+06-28-2022 - Refactoring, renamed the 'parquet' dataset configuration to 'objectStore'
+06-28-2022 - Added support for unstructured file ingestion into Object Store
+07-01-2022 - Bug fix for multiple temporary files created for a dataset ingestion.  This could have caused problems for the Data Consumption API with a pipelinetoken.
+07-02-2022 - Created an option for the dataset config to write the new data to a temporary location.  Previously this was always true
+07-05-2022 - Changed the order in which the destination schema is applied, done much earlier in the process now to support dropping columns before other transformations
+07-12-2022 - Added a data quality row rule javascript function.  A javascript function can be executed for each row during data quality checks.
+07-13-2022 - Bug fix for source file columns ingested that were out of order
+07-15-2022 - Added 'overwrite' mode for writing the Snowflake staging file to avoid S3 sporadic error
+07-18-2022 - Refactored the preprocessor logic
+07-19-2022 - Supporting VARIANT, OBJECT and ARRAY field types for JSON and XML data ingested into Snowflake
+07-19-2022 - Enhanced the Redshift loader to support merging data by key fields
+07-19-2022 - Now throttling multiple dataset from running at the same time if they are writing to the same database table.  Was causing conflicts on occasion.
+07-20-2022 - Support for the SUPER field data type for JSON data ingested into Redshift
+07-21-2022 - Cleaned up the application.properties environment variables
+07-27-2022 - Enhanced unstructured data types to preserve the file name when copying the data to raw-plus
+
+v2.2.3
+08-01-2022 - Changed API calls to validate the api-key
+08-02-2022 - Added support for the AWS Marketplace Metering API calls
+08-02-2022 - On app startup, for RDS, creating the default database and required tables if they do not exist
+08-03-2022 - Added region to the pipeline environment for the Glue catalog
+
+v2.2.4
+08-10-2022 - Removed the RDS database dependencies and moved all dataset and trigger status data into DynamoDb
+08-12-2022 - Moved the TriggerLogger logic to the TriggerLoggerTemplate
+08-12-2022 - Moved API key retrieval to Secrets Manager
+08-23-2022 - Support for stand-alone EMR clusters without EKS
+08-31-2022 - Fixed issues with the Dataset Status objects being returned from the REST API
+09-23-2022 - Fixed issues with the AWS Marketplace Metering API calls
+
+v2.3.0
+12-20-2022 - Major refactoring of the IData pipeline-core Github project (private) into this pipeline-server (open-source) project, removed spark (EMR, EKS on EMR) dependencies
+12-20-2022 - Refactored to leverage Athena for parquet generation for more efficiency
+12-21-2022 - Refactored the dataset configuration logic
+01-04-2023 - Added 'Lakehouse' object store support using Athena with Apache Iceberg integration (https://iceberg.apache.org/)
+01-31-2023 - Refactored data quality, deduplication and row level data transformations (javascript)

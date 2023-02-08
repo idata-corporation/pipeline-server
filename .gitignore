@@ -5,6 +5,7 @@ project/*
 !project/*.sbt
 target/
 build/
+.idea/
 
 # eclipse
 build
