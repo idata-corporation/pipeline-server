@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pipeline-server.fullname" . }}
+  labels:
+    {{- include "pipeline-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8080
+      protocol: TCP
+      name: springboot
+  selector:
+    {{- include "pipeline-server.selectorLabels" . | nindent 4 }}

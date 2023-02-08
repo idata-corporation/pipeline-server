@@ -1,0 +1,126 @@
+# Default values for pipeline-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: 116279234263.dkr.ecr.us-east-1.amazonaws.com/pipeline
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "0f277509f399a55e2baa0b08a0de0e96e90fdef4"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: pipeline-server.poc.idatadev.cloud
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 2
+    memory: 3144Mi
+  requests:
+    cpu: 2
+    memory: 3144Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+env:
+  javaOpts: -Xms1G -Xmx2G
+  spring:
+    profile: docker
+    config:
+      location: "file:/usr/src/pipeline-server/config/ext-properties.yaml"
+
+configmap:
+  springboot:
+    applicationProperties:
+      spring:
+        servlet:
+          multipart:
+            max-file-size: 1GB
+            max-request-size: 1GB
+        server:
+          tomcat:
+            connection-timeout: "600000"
+        management:
+          health:
+            probes:
+              enabled: "true"
+            livenessState:
+              enabled: "true"
+            readinessState:
+              enabled: "true"
+      schedule:
+        checkFileNotifierQueue: "5000"
+        findJobsToStart: "5000"
+      environment: idata-poc
+      aws:
+        region: us-east-1
+        secretsManager:
+          apiKeysSecretName: idata-poc-my-apikeys
+          snowflakeSecretName: idata-snowflakesecrets
+          redshiftSecretName: idata-redshiftsecrets
+        sns:
+          sendNotifications: "true"
+        sqs:
+          ttlFileNotifierQueueMessages: "60"

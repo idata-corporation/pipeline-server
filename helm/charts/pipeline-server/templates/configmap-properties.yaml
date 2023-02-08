@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  {{- with .Values.configmap.springboot.applicationProperties }}
+  ext-properties.yaml: |
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
