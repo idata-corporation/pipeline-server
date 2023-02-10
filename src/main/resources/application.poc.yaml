@@ -22,7 +22,7 @@ useApiKeys: "false"
 aws:
   region: us-east-1
   secretsManager:
-    apiKeysSecretName: na
+    apiKeysSecretName: my-api-keys-secret-name
     snowflakeSecretName: idata-snowflakesecrets
     redshiftSecretName: idata-redshiftsecrets
   sns:

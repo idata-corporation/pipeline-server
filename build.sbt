@@ -38,6 +38,7 @@ libraryDependencies ++= Seq(
     "com.amazonaws" % "aws-java-sdk-secretsmanager" % awsCoreV,
     "com.amazonaws" % "aws-java-sdk-glue" % awsCoreV,
     "com.amazonaws" % "aws-java-sdk-athena" % awsCoreV,
+    "com.amazonaws" % "aws-java-sdk-marketplacemeteringservice" % awsCoreV,
     "com.google.guava" % "guava" % "30.1-jre",
     "com.google.code.gson" % "gson" % "2.8.6",
     "com.jayway.jsonpath" % "json-path" % "2.5.0",

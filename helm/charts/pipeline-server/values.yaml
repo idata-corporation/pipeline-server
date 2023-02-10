@@ -114,12 +114,13 @@ configmap:
         checkFileNotifierQueue: "5000"
         findJobsToStart: "5000"
       environment: idata-poc
+      useApiKeys: "false"
       aws:
         region: us-east-1
         secretsManager:
-          apiKeysSecretName: idata-poc-my-apikeys
-          snowflakeSecretName: idata-snowflakesecrets
-          redshiftSecretName: idata-redshiftsecrets
+          apiKeysSecretName: na
+          snowflakeSecretName: na
+          redshiftSecretName: na
         sns:
           sendNotifications: "true"
         sqs:

@@ -22,12 +22,15 @@ Author(s): Todd Fearn
 
 import net.idata.pipeline.model.PipelineEnvironment
 import net.idata.pipeline.util.NotificationUtil
+import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
 import org.springframework.stereotype.Component
 
 @Component
 class StartupRunner extends ApplicationRunner {
+    private val logger: Logger = LoggerFactory.getLogger(classOf[StartupRunner])
+
     @Value("${environment}")
     var environment: String = _
 
