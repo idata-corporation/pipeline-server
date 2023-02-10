@@ -27,14 +27,16 @@ import scala.collection.JavaConverters._
 
 object APIKeyValidator {
     def validate(apiKey: String): Unit = {
-        if(apiKey == null)
-            throw new PipelineException("x-api-key does not exist or is invalid")
+        if(PipelineEnvironment.values.useApiKeys) {
+            if(apiKey == null)
+                throw new PipelineException("x-api-key does not exist or is invalid")
 
-        val apiKeysMap = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.apiKeysSecretName)
-            .getOrElse(throw new PipelineException("The Secrets Manager entry for: " + PipelineEnvironment.values.apiKeysSecretName))
-        val apiKeys = apiKeysMap.asScala.map { case (key, value) => value }.toList
+            val apiKeysMap = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.apiKeysSecretName)
+                .getOrElse(throw new PipelineException("The Secrets Manager entry for: " + PipelineEnvironment.values.apiKeysSecretName))
+            val apiKeys = apiKeysMap.asScala.map { case (key, value) => value }.toList
 
-        if(! apiKeys.contains(apiKey))
-            throw new PipelineException("Invalid x-api-key: " + apiKey)
+            if(! apiKeys.contains(apiKey))
+                throw new PipelineException("Invalid x-api-key: " + apiKey)
+        }
     }
 }

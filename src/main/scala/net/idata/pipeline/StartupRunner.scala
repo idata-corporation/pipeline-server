@@ -31,6 +31,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${environment}")
     var environment: String = _
 
+    @Value("${useApiKeys}")
+    var useApiKeys: Boolean = _
+
     @Value("${aws.region}")
     var region: String = _
 
@@ -80,6 +83,7 @@ class StartupRunner extends ApplicationRunner {
             archivedMetadataTableName,
             datasetStatusTableName,
             fileNotifierMessageTableName,
+            useApiKeys,
             apiKeysSecretName,
             snowflakeSecretName,
             redshiftSecretName

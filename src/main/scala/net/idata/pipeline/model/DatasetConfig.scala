@@ -61,7 +61,8 @@ case class ColumnRule(
                          columnName: String,
                          function: String,
                          parameter: String,
-                         onFailureIsError: Boolean
+                         onFailureIsError: Boolean,
+                         description: String
                      )
 
 case class Transformation(

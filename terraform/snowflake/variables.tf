@@ -1,5 +1,5 @@
 variable "environment_name" {
-  description = "Environment name for your Pipeline (e.g. mycompany-dev)"
+  description = "Environment name for your Pipeline (e.g. mycompany-poc)"
   type        = string
-  default     = "edp-dev"
+  default     = "idata-poc"
 }

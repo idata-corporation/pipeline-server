@@ -43,6 +43,40 @@ class SnowflakeLoader(jobContext: JobContext) {
         // Load the snowflake driver
         Class.forName("net.snowflake.client.jdbc.SnowflakeDriver")
 
+        // Get the secrets
+        val secrets = retrieveSecrets(PipelineEnvironment.values.snowflakeSecretName)
+
+        var conn: Connection = null
+        var statement: Statement = null
+        try {
+            val properties = new Properties()
+            properties.setProperty("user", secrets.username)
+            properties.setProperty("password", secrets.password)
+            properties.setProperty("warehouse", config.destination.database.snowflake.warehouse)
+            properties.setProperty("db", config.destination.database.dbName)
+            properties.setProperty("schema", config.destination.database.schema)
+            conn = DriverManager.getConnection(secrets.jdbcUrl, properties)
+            statusUtil.info("processing", "Snowflake connection acquired")
+            statement = conn.createStatement()
+
+            if(!config.destination.database.manageTableManually)
+                createTableIfUndefined(statement)
+
+            val stageSuffix = prepareStagingFile(secrets.stageUrl)
+
+            processFromStage(secrets.stageName, stageSuffix, statement)
+
+            sendNotification()
+            statusUtil.info("end", "Process completed")
+        } finally {
+            if (statement != null)
+                statement.close()
+            if (conn != null)
+                conn.close()
+        }
+    }
+
+    private def retrieveSecrets(secretName: String): SnowflakeSecrets = {
         val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.snowflakeSecretName)
             .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.snowflakeSecretName))
         val username = dbSecret.get("username")
@@ -57,45 +91,33 @@ class SnowflakeLoader(jobContext: JobContext) {
         val stageName = dbSecret.get("stageName")
         if(stageName == null)
             throw new PipelineException("Could not retrieve the Snowflake stageName from Secrets Manager")
-
-        var conn: Connection = null
-        var statement: Statement = null
-        try {
-            val properties = new Properties()
-            properties.setProperty("user", username)
-            properties.setProperty("password", password)
-            properties.setProperty("warehouse", config.destination.database.snowflake.warehouse)
-            properties.setProperty("db", config.destination.database.dbName)
-            properties.setProperty("schema", config.destination.database.schema)
-            conn = DriverManager.getConnection(jdbcUrl, properties)
-            statusUtil.info("processing", "Snowflake connection acquired")
-            statement = conn.createStatement()
-
-            if(!config.destination.database.manageTableManually)
-                createTableIfUndefined(statement)
-
-            val snowflakeStageUrl = prepareStagingFile()
-
-            processFromStage(stageName, snowflakeStageUrl, statement)
-
-            sendNotification()
-            statusUtil.info("end", "Process completed")
-        } finally {
-            if (statement != null)
-                statement.close()
-            if (conn != null)
-                conn.close()
+        val stageUrl = {
+            val url = dbSecret.get("stageUrl")
+            if(url == null)
+                throw new PipelineException("Could not retrieve the Snowflake stageUrl from Secrets Manager")
+            if(url.endsWith("/"))
+                url
+            else
+                url + "/"
         }
+
+        SnowflakeSecrets(
+            username,
+            password,
+            jdbcUrl,
+            stageName,
+            stageUrl
+        )
     }
 
-    private def prepareStagingFile(): String = {
-        val stageUrl = config.name + "." + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + "/"
-        val tempFilesUrl = "s3://" + PipelineEnvironment.values.environment + "-temp/snowflake/" + stageUrl
+    private def prepareStagingFile(baseStageUrl: String): String = {
+        val stageSuffix = config.name + "." + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + "/"
+        val tempFilesUrl = baseStageUrl + stageSuffix
         if(useParquetStagingFile())
             prepareParquetStagingFile(tempFilesUrl)
         else
             prepareCsvStagingFile(tempFilesUrl)
-        stageUrl
+        stageSuffix
     }
 
     private def prepareParquetStagingFile(stageUrl: String): Unit = {
@@ -144,7 +166,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         config.source.fileAttributes.csvAttributes != null && config.destination.database.snowflake.keyFields == null
     }
 
-    private def processFromStage(stageName: String, stageUrl: String, statement: Statement): Unit = {
+    private def processFromStage(stageName: String, stageSuffix: String, statement: Statement): Unit = {
         // Use warehouse, DB, schema name
         statement.execute("USE WAREHOUSE " + config.destination.database.snowflake.warehouse)
         statement.execute("USE " + config.destination.database.dbName)
@@ -162,18 +184,18 @@ class SnowflakeLoader(jobContext: JobContext) {
         // Override?
         val sql = {
             if (config.destination.database.snowflake.sqlOverride != null) {
-                val stage = createStage(stageUrl, stageName)
+                val stage = createStage(stageName, stageSuffix)
                 val fileFormat = createFileFormat()
                 config.destination.database.snowflake.sqlOverride.replace("@stage", stage) + fileFormat
             }
             else {
                 // JSON or XML?
                 if(config.source.fileAttributes.jsonAttributes != null ||  config.source.fileAttributes.xmlAttributes != null)
-                    buildCopy(stageUrl, stageName)
+                    buildCopy(stageName, stageSuffix)
                 else if(config.destination.database.snowflake.keyFields != null)
-                    buildMerge(stageUrl, stageName)
+                    buildMerge(stageName, stageSuffix)
                 else
-                    buildCopy(stageUrl, stageName)
+                    buildCopy(stageName, stageSuffix)
             }
         }
         statusUtil.info("processing","SQL command: " + sql)
@@ -220,8 +242,8 @@ class SnowflakeLoader(jobContext: JobContext) {
         }
     }
 
-    private def buildCopy(stageUrl: String, stageName: String): String = {
-        val stage = createStage(stageUrl, stageName)
+    private def buildCopy(stageName: String, stageSuffix: String): String = {
+        val stage = createStage(stageName, stageSuffix)
         val fileFormat = createFileFormat()
 
         val copy = new StringBuilder()
@@ -243,7 +265,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         copy.toString
     }
 
-    private def buildMerge(stageUrl: String, stageName: String): String = {
+    private def buildMerge(stageName: String, stageSuffix: String): String = {
         val merge = new StringBuilder()
 
         val schemaProperties = config.destination.schemaProperties
@@ -257,11 +279,11 @@ class SnowflakeLoader(jobContext: JobContext) {
             val fieldName = "$" + i.toString + " " + schemaProperties.fields.get(i-1).name + ","
             merge.append(fieldName)
         })
-        merge.deleteCharAt(merge.length-1)
+        merge.setLength(merge.length -1)
 
         // Stage
         merge.append(" FROM ")
-        val stage = createStage(stageUrl, stageName)
+        val stage = createStage(stageName, stageSuffix)
         merge.append(stage)
 
         // File format
@@ -278,40 +300,34 @@ class SnowflakeLoader(jobContext: JobContext) {
         config.destination.database.snowflake.keyFields.forEach(keyField => {
             merge.append(config.destination.database.table + "." + keyField + " = " + tempTable + "." + keyField + " AND ")
         })
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
+        merge.setLength(merge.length -4)
 
         // When matched
         merge.append("WHEN MATCHED THEN UPDATE SET ")
         schemaProperties.fields.forEach(field => {
             merge.append(field.name + " = " + tempTable + "." + field.name + ", ")
         })
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
+        merge.setLength(merge.length -2)
 
         // When not matched
         merge.append(" WHEN NOT MATCHED THEN INSERT (")
         schemaProperties.fields.forEach(field => {
             merge.append(field.name + ", ")
         })
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
+        merge.setLength(merge.length -2)
         merge.append(") VALUES (")
         schemaProperties.fields.forEach(field => {
             merge.append(tempTable + "." + field.name + ", ")
         })
-        merge.deleteCharAt(merge.length-1)
-        merge.deleteCharAt(merge.length-1)
+        merge.setLength(merge.length -2)
         merge.append(")")
 
         merge.toString
     }
 
-    private def createStage(stageUrl: String, stageName: String): String = {
+    private def createStage(stageName: String, stageSuffix: String): String = {
         // Sample stageUrl: [dataset-name].22ba8738-ed5b-57de-a6a5-ee18f0f6264a/
-        "'@" + stageName + "/" + stageUrl + "'"
+        "'@" + stageName + "/" + stageSuffix + "'"
     }
 
     private def createFileFormat(): String = {
