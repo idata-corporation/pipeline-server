@@ -3,5 +3,7 @@ The [IData Pipeline](https://www.idata.net) is an open-source no-code AWS data p
 
 The Pipeline can perform deduplication of data, data quality checks, transformation with Javascript, transformation into S3 parquet in your data lake using [Apache Iceberg](https://iceberg.apache.org/), or transformation into [Redshift](https://aws.amazon.com/redshift/) or [Snowflake](https://www.snowflake.com/) and much more. When data lands in its final destination, automatic notifications are fired via SNS, enabling downstream systems and users to be notified immediately.
 
+The IData Pipeline can save you hundreds of hours of work attempting to build your own data pipeline on AWS.
+
 ## installation
 For installation instructions, go to https://docs.idata.net/installation/
