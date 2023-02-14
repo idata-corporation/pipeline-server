@@ -22,9 +22,9 @@ useApiKeys: "false"
 aws:
   region: us-east-1
   secretsManager:
-    apiKeysSecretName: my-api-keys-secret-name
-    snowflakeSecretName: idata-snowflakesecrets
-    redshiftSecretName: idata-redshiftsecrets
+    apiKeysSecretName: idata-poc-api-keys
+    snowflakeSecretName: idata-poc-snowflakesecrets
+    redshiftSecretName: idata-poc-redshiftsecrets
   sns:
     sendNotifications: "true"
   sqs:
