@@ -1,5 +1,5 @@
 # pipeline-server
 The IData Pipeline server
 
-# installation
+## installation
 For installation instructions, go to https://docs.idata.net/installation/
