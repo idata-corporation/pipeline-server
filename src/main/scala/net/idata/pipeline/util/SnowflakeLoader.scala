@@ -44,7 +44,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         Class.forName("net.snowflake.client.jdbc.SnowflakeDriver")
 
         // Get the secrets
-        val secrets = retrieveSecrets(PipelineEnvironment.values.snowflakeSecretName)
+        val secrets = retrieveSecrets()
 
         var conn: Connection = null
         var statement: Statement = null
@@ -76,7 +76,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         }
     }
 
-    private def retrieveSecrets(secretName: String): SnowflakeSecrets = {
+    private def retrieveSecrets(): SnowflakeSecrets = {
         val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.snowflakeSecretName)
             .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.snowflakeSecretName))
         val username = dbSecret.get("username")

@@ -21,7 +21,7 @@ Author(s): Todd Fearn
 */
 
 import com.google.gson.Gson
-import net.idata.pipeline.model.{JobContext, Notification, PipelineEnvironment, PipelineException}
+import net.idata.pipeline.model.{JobContext, Notification, PipelineEnvironment, PipelineException, RedshiftSecrets}
 import net.idata.pipeline.util.aws.SecretsManagerUtil
 
 import java.sql.{Connection, DriverManager, Statement}
@@ -38,20 +38,7 @@ class RedshiftLoader(jobContext: JobContext) {
 
         statusUtil.info("begin", "Loading the data into Redshift database: " + config.destination.database.dbName + ", table: " + config.destination.database.table)
 
-        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.redshiftSecretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager"))
-        val username = dbSecret.get("username")
-        if(username == null)
-            throw new PipelineException("Could not retrieve the Redshift username from Secrets Manager")
-        val password = dbSecret.get("password")
-        if(password == null)
-            throw new PipelineException("Could not retrieve the Redshift password from Secrets Manager")
-        val jdbcUrl = dbSecret.get("jdbcUrl")
-        if(jdbcUrl == null)
-            throw new PipelineException("Could not retrieve the Redshift jdbcUrl from Secrets Manager")
-        val dbRole = dbSecret.get("dbRole")
-        if(dbRole == null)
-            throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager")
+        val secrets = retrieveSecrets()
 
         Class.forName("com.amazon.redshift.jdbc42.Driver")
         statusUtil.info("processing", "Redshift driver loaded successfully")
@@ -61,10 +48,10 @@ class RedshiftLoader(jobContext: JobContext) {
 
         try {
             val properties = new Properties()
-            properties.setProperty("user", username)
-            properties.setProperty("password", password)
-            statusUtil.info("processing", "jdbc url: " + jdbcUrl)
-            conn = DriverManager.getConnection(jdbcUrl, properties)
+            properties.setProperty("user", secrets.username)
+            properties.setProperty("password", secrets.password)
+            statusUtil.info("processing", "jdbc url: " + secrets.jdbcUrl)
+            conn = DriverManager.getConnection(secrets.jdbcUrl, properties)
             statusUtil.info("processing", "Redshift connection acquired")
             statement = conn.createStatement()
 
@@ -76,9 +63,9 @@ class RedshiftLoader(jobContext: JobContext) {
             }
 
             if(config.destination.database.redshift.keyFields != null)
-                mergeInto(statement, dbRole, stageUrl)
+                mergeInto(statement, secrets.dbRole, stageUrl)
             else
-                copyInto(statement, dbRole, stageUrl)
+                copyInto(statement, secrets.dbRole, stageUrl)
 
             sendNotification()
             statusUtil.info("end", "Process completed")
@@ -88,6 +75,30 @@ class RedshiftLoader(jobContext: JobContext) {
             if (conn != null)
                 conn.close()
         }
+    }
+
+    private def retrieveSecrets(): RedshiftSecrets = {
+        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.redshiftSecretName)
+            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager"))
+        val username = dbSecret.get("username")
+        if (username == null)
+            throw new PipelineException("Could not retrieve the Redshift username from Secrets Manager")
+        val password = dbSecret.get("password")
+        if (password == null)
+            throw new PipelineException("Could not retrieve the Redshift password from Secrets Manager")
+        val jdbcUrl = dbSecret.get("jdbcUrl")
+        if (jdbcUrl == null)
+            throw new PipelineException("Could not retrieve the Redshift jdbcUrl from Secrets Manager")
+        val dbRole = dbSecret.get("dbRole")
+        if (dbRole == null)
+            throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager")
+
+        RedshiftSecrets(
+            username,
+            password,
+            jdbcUrl,
+            dbRole,
+        )
     }
 
     private def prepareStagingFile(): String = {
