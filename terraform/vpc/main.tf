@@ -30,9 +30,14 @@ module "vpc" {
   # enable_vpn_gateway     = false
   # enable_dns_support   = true
 
-  enable_ipv6                     = true
-  assign_ipv6_address_on_creation = true
-  create_egress_only_igw          = true
+  enable_ipv6 = true
+
+  public_subnet_assign_ipv6_address_on_creation   = true
+  private_subnet_assign_ipv6_address_on_creation  = true
+  database_subnet_assign_ipv6_address_on_creation = true
+
+  create_egress_only_igw = true
+
 
   public_subnet_ipv6_prefixes   = [0, 1, 2]
   private_subnet_ipv6_prefixes  = [3, 4, 5]
@@ -42,12 +47,12 @@ module "vpc" {
 
   public_subnet_tags = {
     "kubernetes.io/cluster/${var.environment_name}" = "shared"
-    "kubernetes.io/role/elb"              = 1
+    "kubernetes.io/role/elb"                        = 1
   }
 
   private_subnet_tags = {
     "kubernetes.io/cluster/${var.environment_name}" = "shared"
-    "kubernetes.io/role/internal-elb"     = 1
+    "kubernetes.io/role/internal-elb"               = 1
   }
 
   enable_flow_log                      = true
@@ -77,7 +82,7 @@ module "vpc_endpoints" {
       service_type    = "Gateway"
       route_table_ids = flatten([module.vpc.private_route_table_ids])
       #policy          = data.aws_iam_policy_document.dynamodb_endpoint_policy.json
-      tags            = { Name = "dynamodb-vpc-endpoint" }
+      tags = { Name = "dynamodb-vpc-endpoint" }
     },
     elasticmapreduce = {
       service             = "elasticmapreduce"

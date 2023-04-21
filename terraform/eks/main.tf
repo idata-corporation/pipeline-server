@@ -3,15 +3,15 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
   exec {
-    api_version = "client.authentication.k8s.io/v1alpha1"
+    api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     # This requires the awscli to be installed locally where Terraform is executed
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_id]
+    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
   }
 }
 
 locals {
-  cluster_version = "1.22"
+  cluster_version = "1.26"
   region          = "us-east-1"
 
   tags = {
@@ -34,22 +34,36 @@ module "eks" {
   cluster_endpoint_private_access = true
   cluster_endpoint_public_access  = true
 
+  cluster_ip_family = "ipv6"
+
   enable_irsa = true
 
   cluster_addons = {
     coredns = {
-      resolve_conflicts = "OVERWRITE"
+      most_recent = true
     }
-    kube-proxy = {}
+    kube-proxy = {
+      most_recent = true
+    }
     vpc-cni = {
-      resolve_conflicts = "OVERWRITE"
+      most_recent              = true
+      before_compute           = true
+      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      configuration_values = jsonencode({
+        env = {
+          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
     }
   }
 
-  cluster_encryption_config = [{
-    provider_key_arn = aws_kms_key.eks.arn
-    resources        = ["secrets"]
-  }]
+  # create_kms_key = false
+  # cluster_encryption_config = [{
+  #   provider_key_arn = aws_kms_key.eks.arn
+  #   resources        = ["secrets"]
+  # }]
 
   cluster_tags = {
     # This should not affect the name of the cluster primary security group
@@ -130,10 +144,10 @@ module "eks_managed_node_group" {
   source = "terraform-aws-modules/eks/aws//modules/eks-managed-node-group"
 
   name            = "separate-eks-mng"
-  cluster_name    = module.eks.cluster_id
+  cluster_name    = module.eks.cluster_name
   cluster_version = module.eks.cluster_version
 
-  vpc_id     = data.terraform_remote_state.vpc.outputs.vpc_id
+  #vpc_id     = data.terraform_remote_state.vpc.outputs.vpc_id
   subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnets
 
   cluster_primary_security_group_id = module.eks.cluster_primary_security_group_id
@@ -168,7 +182,7 @@ module "fargate_profile" {
   source = "terraform-aws-modules/eks/aws//modules/fargate-profile"
 
   name         = "separate-fargate-profile"
-  cluster_name = module.eks.cluster_id
+  cluster_name = module.eks.cluster_name
 
   subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnets
 
@@ -212,11 +226,11 @@ resource "aws_iam_role_policy_attachment" "additional" {
 
 module "vpc_cni_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 4.12"
+  #version = "~> 4.12"
 
   role_name_prefix      = "VPC-CNI-IRSA"
   attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv6   = false
+  vpc_cni_enable_ipv6   = true
 
   oidc_providers = {
     main = {
