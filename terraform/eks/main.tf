@@ -36,7 +36,9 @@ module "eks" {
 
   cluster_ip_family = "ipv6"
 
-  enable_irsa = true
+  # enable_irsa = true
+
+  create_cni_ipv6_iam_policy = true
 
   cluster_addons = {
     coredns = {
