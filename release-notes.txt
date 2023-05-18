@@ -237,5 +237,7 @@ v2.3.0
 12-20-2022 - Major refactoring of the IData pipeline-core Github project (private) into this pipeline-server (open-source) project, removed spark (EMR, EKS on EMR) dependencies
 12-20-2022 - Refactored to leverage Athena for parquet generation for more efficiency
 12-21-2022 - Refactored the dataset configuration logic
+
+v2.3.1
 01-04-2023 - Added 'Lakehouse' object store support using Athena with Apache Iceberg integration (https://iceberg.apache.org/)
 01-31-2023 - Refactored data quality, deduplication and row level data transformations (javascript)
