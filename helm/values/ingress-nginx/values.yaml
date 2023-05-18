@@ -12,6 +12,7 @@ controller:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
       service.beta.kubernetes.io/aws-load-balancer-internal: "true"
     externalTrafficPolicy: Local
+    ipFamilyPolicy: PreferDualStack
     ipFamilies:
       - IPv6
       - IPv4
