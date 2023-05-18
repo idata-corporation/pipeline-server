@@ -39,7 +39,6 @@ case class PipelineEnvironment(
                                   datasetStatusTableName: String,
                                   fileNotifierMessageTableName: String,
                                   useApiKeys: Boolean,
-                                  apiKeysSecretName: String,
-                                  snowflakeSecretName: String,
-                                  redshiftSecretName: String
+                                  awsSecrets: AwsSecrets,
+                                  httpSecrets: HttpSecrets
                               )

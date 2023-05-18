@@ -31,8 +31,8 @@ object APIKeyValidator {
             if(apiKey == null)
                 throw new PipelineException("x-api-key does not exist or is invalid")
 
-            val apiKeysMap = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.apiKeysSecretName)
-                .getOrElse(throw new PipelineException("The Secrets Manager entry for: " + PipelineEnvironment.values.apiKeysSecretName))
+            val apiKeysMap = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.awsSecrets.apiKeysName)
+                .getOrElse(throw new PipelineException("The Secrets Manager entry for: " + PipelineEnvironment.values.awsSecrets.apiKeysName))
             val apiKeys = apiKeysMap.asScala.map { case (key, value) => value }.toList
 
             if(! apiKeys.contains(apiKey))

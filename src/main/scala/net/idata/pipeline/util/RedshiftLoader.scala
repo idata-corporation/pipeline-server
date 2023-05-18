@@ -78,7 +78,7 @@ class RedshiftLoader(jobContext: JobContext) {
     }
 
     private def retrieveSecrets(): RedshiftSecrets = {
-        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.redshiftSecretName)
+        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.awsSecrets.redshiftName)
             .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager"))
         val username = dbSecret.get("username")
         if (username == null)

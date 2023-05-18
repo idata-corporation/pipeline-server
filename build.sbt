@@ -49,7 +49,7 @@ libraryDependencies ++= Seq(
     "org.everit.json" % "org.everit.json.schema" % "1.5.1",
     "org.springframework.boot" % "spring-boot-starter" % "2.6.7",
     "org.springframework.boot" % "spring-boot-starter-web" % "2.6.7",
-    "net.snowflake" % "snowflake-jdbc" % "3.13.23",
+    "net.snowflake" % "snowflake-jdbc" % "3.13.26",
     "org.apache.commons" % "commons-csv" % "1.9.0",
     "io.deephaven" % "deephaven-csv" % "0.8.0"
 )

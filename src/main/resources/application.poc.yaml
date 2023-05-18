@@ -19,6 +19,14 @@ schedule:
   findJobsToStart: "5000"
 environment: idata-poc
 useApiKeys: "false"
+secrets:
+  awsSecretsManager:
+    enabled: "true"
+  http:
+    enabled: "false"
+    apiKeysSecretsUrl: na
+    snowflakeSecretsUrl: na
+    redshiftSecretsUrl: na
 aws:
   region: us-east-1
   secretsManager:

@@ -77,8 +77,8 @@ class SnowflakeLoader(jobContext: JobContext) {
     }
 
     private def retrieveSecrets(): SnowflakeSecrets = {
-        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.snowflakeSecretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.snowflakeSecretName))
+        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.awsSecrets.snowflakeName)
+            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.awsSecrets.snowflakeName))
         val username = dbSecret.get("username")
         if(username == null)
             throw new PipelineException("Could not retrieve the Snowflake username from Secrets Manager")

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Author(s): Todd Fearn
 */
 
-import net.idata.pipeline.model.PipelineEnvironment
+import net.idata.pipeline.model.{AwsSecrets, HttpSecrets, PipelineEnvironment}
 import net.idata.pipeline.util.NotificationUtil
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
@@ -40,6 +40,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.region}")
     var region: String = _
 
+    @Value("${secrets.awsSecretsManager.enabled}")
+    var awsSecretsManagerEnabled: Boolean = _
+
     @Value("${aws.secretsManager.apiKeysSecretName}")
     var apiKeysSecretName: String = _
 
@@ -48,6 +51,18 @@ class StartupRunner extends ApplicationRunner {
 
     @Value("${aws.secretsManager.redshiftSecretName}")
     var redshiftSecretName: String = _
+
+    @Value("${secrets.http.enabled}")
+    var httpSecretsEnabled: Boolean = _
+
+    @Value("${secrets.http.apiKeysSecretsUrl}")
+    var apiKeysHttpSecretsUrl: String = _
+
+    @Value("${secrets.http.snowflakeSecretsUrl}")
+    var snowflakeHttpSecretsUrl: String = _
+
+    @Value("${secrets.http.redshiftSecretsUrl}")
+    var redshiftHttpSecretsUrl: String = _
 
     @Value("${aws.sns.sendNotifications}")
     var snsSendNotifications: Boolean = _
@@ -76,6 +91,19 @@ class StartupRunner extends ApplicationRunner {
                 null
         }
 
+        val awsSecrets = AwsSecrets(
+            awsSecretsManagerEnabled,
+            apiKeysSecretName,
+            snowflakeSecretName,
+            redshiftSecretName
+        )
+        val httpSecrets = HttpSecrets(
+            httpSecretsEnabled,
+            apiKeysHttpSecretsUrl,
+            snowflakeHttpSecretsUrl,
+            redshiftHttpSecretsUrl
+        )
+
         val pipelineEnvironment = PipelineEnvironment(
             environment,
             region,
@@ -87,9 +115,8 @@ class StartupRunner extends ApplicationRunner {
             datasetStatusTableName,
             fileNotifierMessageTableName,
             useApiKeys,
-            apiKeysSecretName,
-            snowflakeSecretName,
-            redshiftSecretName
+            awsSecrets,
+            httpSecrets
         )
 
         PipelineEnvironment.init(pipelineEnvironment)
