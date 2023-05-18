@@ -13,5 +13,5 @@ controller:
       service.beta.kubernetes.io/aws-load-balancer-internal: "true"
     externalTrafficPolicy: Local
     ipFamilies:
-      - IPv6
+      - IPv4
   

@@ -155,6 +155,9 @@ class StatusUtil {
                 else if (status.processName.compareToIgnoreCase("JobRunner") == 0
                     && status.state.compareToIgnoreCase("end") == 0)
                     false
+                else if (status.processName.compareToIgnoreCase("ObjectStoreLoader") == 0
+                    && status.state.compareToIgnoreCase("end") == 0)
+                    false
                 else if (status.processName.compareToIgnoreCase("SnowflakeLoader") == 0
                     && status.state.compareToIgnoreCase("end") == 0)
                     false

@@ -136,8 +136,8 @@ class DynamoDbUtil(dynamoDB: DynamoDB, amazonDynamoDb: AmazonDynamoDB) extends N
 
         val spec = new QuerySpec()
             .withKeyConditionExpression(keyName + " = :v_key")
-            .withValueMap(new ValueMap()
-                .withString(":v_key", key))
+            .withValueMap(new ValueMap().withString(":v_key", key))
+            .withConsistentRead(true)
 
         val items = table.query(spec)
         items.asScala.map(item => {
@@ -153,7 +153,7 @@ class DynamoDbUtil(dynamoDB: DynamoDB, amazonDynamoDb: AmazonDynamoDB) extends N
 
     override def getPageOfItemsAsJSON(tableName: String, pageNbr: Int, maxPageSize: Int): List[String] = {
         val table = dynamoDB.getTable(tableName)
-        val scanSpec = new ScanSpec().withMaxPageSize(maxPageSize)
+        val scanSpec = new ScanSpec().withMaxPageSize(maxPageSize).withConsistentRead(true)
         val pagesOfItems = table.scan(scanSpec).pages()
         pagesOfItems.asScala.zipWithIndex.flatMap { case (page, index) =>
             if(index == pageNbr)
