@@ -8,7 +8,7 @@ image:
   repository: 709825985650.dkr.ecr.us-east-1.amazonaws.com/idata-corporation/pipeline-server
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v2.3.1"
+  tag: "cbc8cb4b432c290f77354080b3e2ab5ff84429b3"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -120,8 +120,8 @@ configmap:
           region: us-east-1
           secretsManager:
             apiKeysSecretName: na
-            snowflakeSecretName: na
-            redshiftSecretName: na
+            snowflakeSecretName: idata-snowflakesecrets
+            redshiftSecretName: idata-redshiftsecrets
           sns:
             sendNotifications: "true"
           sqs:
