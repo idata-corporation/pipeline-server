@@ -17,7 +17,7 @@
 name := "pipeline-server"
 ThisBuild / organization := "net.idata"
 ThisBuild / scalaVersion := "2.12.17"
-ThisBuild / version := "2.3.1"
+ThisBuild / version := "2.3.2"
 
 lazy val root = (project in file(".")).
     enablePlugins(BuildInfoPlugin).

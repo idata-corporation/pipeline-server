@@ -8,7 +8,7 @@ image:
   repository: 709825985650.dkr.ecr.us-east-1.amazonaws.com/idata-corporation/pipeline-server
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "cbc8cb4b432c290f77354080b3e2ab5ff84429b3"
+  tag: "v2.3.2"
 
 imagePullSecrets: []
 nameOverride: ""

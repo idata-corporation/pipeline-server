@@ -240,5 +240,5 @@ v2.3.0
 01-04-2023 - Added 'Lakehouse' object store support using Athena with Apache Iceberg integration (https://iceberg.apache.org/)
 01-31-2023 - Refactored data quality, deduplication and row level data transformations (javascript)
 
-v2.3.1
+v2.3.2
 05-18-2023 - Bug fix - dataset status UI REST API was not reporting the proper status for some ingestion types
