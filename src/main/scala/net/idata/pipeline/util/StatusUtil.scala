@@ -139,8 +139,8 @@ class StatusUtil {
             }
 
             val (error, warning) = {
-                val warning = datasetStatusSummary.status.compareTo("warning") == 0
-                val error = datasetStatusSummary.status.compareTo("error") == 0
+                val warning = status.code.compareTo("warning") == 0
+                val error = status.code.compareTo("error") == 0
                 (error, warning)
             }
 
