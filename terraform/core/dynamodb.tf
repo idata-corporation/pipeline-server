@@ -94,3 +94,19 @@ resource "aws_dynamodb_table" "file-notifier-message" {
     Name = var.environment_name
   }
 }
+
+resource "aws_dynamodb_table" "data-pull" {
+  name         = "${var.environment_name}-data-pull"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "dataset"
+  table_class  = "STANDARD"
+
+  attribute {
+    name = "dataset"
+    type = "S"
+  }
+
+  tags = {
+    Name = var.environment_name
+  }
+}

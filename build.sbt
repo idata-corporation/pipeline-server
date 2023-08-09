@@ -17,7 +17,7 @@
 name := "pipeline-server"
 ThisBuild / organization := "net.idata"
 ThisBuild / scalaVersion := "2.12.17"
-ThisBuild / version := "2.3.2"
+ThisBuild / version := "2.3.3"
 
 lazy val root = (project in file(".")).
     enablePlugins(BuildInfoPlugin).
@@ -29,7 +29,8 @@ lazy val root = (project in file(".")).
 val awsCoreV = "1.12.286"
 
 libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.3.0-SNAP3" % Test,
+    "org.scalatest" %% "scalatest" % "3.2.15" % Test,
+    "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
     "com.amazonaws" % "aws-java-sdk-core" % awsCoreV,
     "com.amazonaws" % "aws-java-sdk-s3" % awsCoreV,
     "com.amazonaws" % "aws-java-sdk-sqs" % awsCoreV,
@@ -51,7 +52,9 @@ libraryDependencies ++= Seq(
     "org.springframework.boot" % "spring-boot-starter-web" % "2.6.7",
     "net.snowflake" % "snowflake-jdbc" % "3.13.23",
     "org.apache.commons" % "commons-csv" % "1.9.0",
-    "io.deephaven" % "deephaven-csv" % "0.8.0"
+    "io.deephaven" % "deephaven-csv" % "0.8.0",
+    "org.quartz-scheduler" % "quartz" % "2.3.2",
+    "org.postgresql" % "postgresql" % "42.6.0"
 )
 
 Compile / unmanagedJars += file("./jars/redshift-jdbc42-2.1.0.9.jar")

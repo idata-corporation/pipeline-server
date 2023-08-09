@@ -1,4 +1,4 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.model
 
 /*
 IData Pipeline
@@ -18,8 +18,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-trait ObjectStoreSQLUtility {
-    def sql(sql: String, outputPath: String): Option[String]
-
-    def sql(databaseName: String, sql: String, outputPath: String): Option[String]
-}
+case class DatasetPull(
+                          dataset: String,
+                          nextPullDate: String,
+                          lastPullTimestampUsed: String
+                       )

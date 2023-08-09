@@ -17,7 +17,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model.PipelineEnvironment
@@ -67,6 +66,7 @@ class StartupRunner extends ApplicationRunner {
         val archivedMetadataTableName = environment + "-archived-metadata"
         val datasetStatusTableName = environment + "-dataset-status"
         val fileNotifierMessageTableName = environment + "-file-notifier-message"
+        val datasetPullTableName = environment + "-data-pull"
 
         // Send SNS notifications?
         val notifyTopicArn = {
@@ -86,6 +86,7 @@ class StartupRunner extends ApplicationRunner {
             archivedMetadataTableName,
             datasetStatusTableName,
             fileNotifierMessageTableName,
+            datasetPullTableName,
             useApiKeys,
             apiKeysSecretName,
             snowflakeSecretName,

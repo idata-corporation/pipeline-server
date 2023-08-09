@@ -16,8 +16,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model.{PipelineEnvironment, PipelineException}
@@ -32,7 +30,7 @@ object APIKeyValidator {
                 throw new PipelineException("x-api-key does not exist or is invalid")
 
             val apiKeysMap = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.apiKeysSecretName)
-                .getOrElse(throw new PipelineException("The Secrets Manager entry for: " + PipelineEnvironment.values.apiKeysSecretName))
+                .getOrElse(throw new PipelineException("The Secrets Manager entry for value: " + PipelineEnvironment.values.apiKeysSecretName + " was not found"))
             val apiKeys = apiKeysMap.asScala.map { case (key, value) => value }.toList
 
             if(! apiKeys.contains(apiKey))

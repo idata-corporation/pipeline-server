@@ -16,8 +16,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Author(s): Todd Fearn
 */
 
 import com.google.common.base.Throwables
@@ -87,10 +85,14 @@ class DatasetAPIController {
             APIKeyValidator.validate(apiKey)
 
             DatasetValidatorUtil.validate(config)
-            val configLowerCase = DatasetValidatorUtil.lowercaseConfig(config)
+            val modifiedConfig = DatasetValidatorUtil.modify(config)
 
             // Write to DynamoDb dataset table
-            DatasetConfigIO.write(configLowerCase)
+            DatasetConfigIO.write(modifiedConfig)
+
+            // If the source is a database, initialize the dataset pull table
+            if(modifiedConfig.source.databaseAttributes != null)
+                DataPullTableUtil.initialize(modifiedConfig.name, modifiedConfig.source.databaseAttributes.cronExpression)
 
             // If the destination is object store, create a Glue table if not manually managing Glue for this dataset?
             if(config.destination.objectStore != null) {

@@ -16,8 +16,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Author(s): Todd Fearn
 */
 
 case class DatasetConfig(
@@ -30,7 +28,8 @@ case class DatasetConfig(
 
 case class Source(
                      schemaProperties: SchemaProperties,
-                     fileAttributes: FileAttributes
+                     fileAttributes: FileAttributes,
+                     databaseAttributes: DatabaseAttributes
                  )
 
 case class Destination(
@@ -103,6 +102,18 @@ case class UnstructuredAttributes(
                                      fileExtension: String,
                                      preserveFilename: Boolean
                                  )
+
+case class DatabaseAttributes(
+                                 `type`: String,
+                                 postgresSecretsName: String,
+                                 cronExpression: String,
+                                 schema: String,
+                                 table: String,
+                                 includeFields: java.util.List[String],
+                                 timestampFieldName: String,
+                                 sqlOverride: String,
+                                 outputDelimiter: String
+                             )
 
 case class ObjectStore(
                           prefixKey: String,
