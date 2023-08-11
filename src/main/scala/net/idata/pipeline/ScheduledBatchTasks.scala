@@ -17,7 +17,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Author(s): Todd Fearn
 */
 
 
@@ -26,7 +25,7 @@ import com.google.gson.Gson
 import net.idata.pipeline.controller.{FileNotifier, JobRunner}
 import net.idata.pipeline.model._
 import net.idata.pipeline.model.aws.SQSMessageS3
-import net.idata.pipeline.util.{NoSQLDbUtil, QueueUtil}
+import net.idata.pipeline.util.{DataPuller, NoSQLDbUtil, QueueUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -37,6 +36,18 @@ import scala.collection.JavaConverters._
 @Component
 class ScheduledBatchTasks {
     private val logger: Logger = LoggerFactory.getLogger(classOf[ScheduledBatchTasks])
+
+    @Scheduled(fixedRateString = "${schedule.checkDatabaseSourceQueries}")
+    private def checkForDatabaseSourceQueries(): Unit = {
+        try {
+            if(isAppInitialized) {
+                new DataPuller().run()
+            }
+        } catch {
+            case e: Exception =>
+                logger.error("checkForDatabaseSourceQueries error: " + Throwables.getStackTraceAsString(e))
+        }
+    }
 
     @Scheduled(fixedRateString = "${schedule.checkFileNotifierQueue}")
     private def checkFileNotifierQueue(): Unit = {

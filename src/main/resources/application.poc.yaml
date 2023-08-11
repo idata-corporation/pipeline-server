@@ -17,6 +17,7 @@ spring:
 schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"
+  checkDatabaseSourceQueries: "30000"
 environment: idata-poc
 useApiKeys: "false"
 aws:
@@ -24,7 +25,7 @@ aws:
   secretsManager:
     apiKeysSecretName: idata-poc-api-keys
     snowflakeSecretName: idata-poc-snowflakesecrets
-    redshiftSecretName: idata-poc-redshiftsecrets
+    redshiftSecretName: idata-redshiftsecrets
   sns:
     sendNotifications: "true"
   sqs:

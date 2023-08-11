@@ -16,15 +16,17 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Author(s): Todd Fearn
 */
 
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
 import com.amazonaws.services.secretsmanager.model.{GetSecretValueRequest, GetSecretValueResult}
 import com.google.gson.Gson
 
-object SecretsManagerUtil {
+trait SecretsManagerUtil {
+    def getSecretMap(secretName: String): Option[java.util.Map[String, String]]
+}
+
+object SecretsManagerUtil extends SecretsManagerUtil {
     def getSecretMap(secretName: String): Option[java.util.Map[String, String]] = {
         val result = get(secretName).orNull
         if (result == null)

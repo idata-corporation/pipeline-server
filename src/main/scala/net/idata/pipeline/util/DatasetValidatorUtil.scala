@@ -16,11 +16,10 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Author(s): Todd Fearn
 */
 
 import net.idata.pipeline.model._
+import org.quartz.CronExpression
 
 import scala.collection.JavaConverters._
 
@@ -34,13 +33,13 @@ object DatasetValidatorUtil {
         // Source config
         if (config.source == null)
             throw new PipelineException("dataset 'source' is not defined in the JSON")
-        if (config.source.fileAttributes == null)
-            throw new PipelineException("'source.fileAttributes' must be defined")
+        if (config.source.fileAttributes == null && config.source.databaseAttributes == null)
+            throw new PipelineException("Either 'source.fileAttributes' or 'source.databaseAttributes must be defined")
 
-        if (config.source.fileAttributes.unstructuredAttributes != null)
-            validateUnstructured(config: DatasetConfig)
+        if (config.source.fileAttributes != null && config.source.fileAttributes.unstructuredAttributes != null)
+            validateUnstructured(config)
         else
-            validateStructuredAndSemiStructured(config: DatasetConfig)
+            validateStructuredAndSemiStructured(config)
     }
 
     private def validateUnstructured(config: DatasetConfig): Unit = {
@@ -73,12 +72,48 @@ object DatasetValidatorUtil {
                 config.source.schemaProperties.fields.asScala.map(_.name)
         }
 
+        // Source database attributes
+        if(config.source.databaseAttributes != null) {
+            if(config.source.databaseAttributes.`type` == null)
+                throw new PipelineException("If 'source.databaseAttributes' is defined, the 'type' field must also be defined")
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("postgres") != 0 &&
+                config.source.databaseAttributes.`type`.compareToIgnoreCase("mssql") != 0 &&
+                config.source.databaseAttributes.`type`.compareToIgnoreCase("mysql") != 0) {
+                throw new PipelineException("The only supported 'databaseAttributes.type's are currently 'postgres', 'mysql' and 'mssql'")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("postgres") == 0) {
+                if(config.source.databaseAttributes.postgresSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'postgresSecretsName' field must also be defined")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("mssql") == 0) {
+                if(config.source.databaseAttributes.mssqlSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'mssqlSecretsName' field must also be defined")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("mysql") == 0) {
+                if(config.source.databaseAttributes.mysqlSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'mysqlSecretsName' field must also be defined")
+            }
+            if(config.source.databaseAttributes.cronExpression == null)
+                throw new PipelineException("If 'source.databaseAttributes' is defined, the 'cronExpression' field must also be defined")
+            if(!CronExpression.isValidExpression(config.source.databaseAttributes.cronExpression))
+                throw new PipelineException("If 'source.databaseAttributes.cronExpression' is invalid: " + config.source.databaseAttributes.cronExpression)
+
+            if(config.source.databaseAttributes.sqlOverride == null) {
+                if(config.source.databaseAttributes.schema == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'schema' field must also be defined")
+                if(config.source.databaseAttributes.table == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'table' field must also be defined")
+                if(config.source.databaseAttributes.timestampFieldName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, 'timestampFieldName' must also be defined")
+            }
+        }
+
         // Data quality
         if(config.dataQuality != null) {
-            if(config.dataQuality.validateFileHeader && config.source.fileAttributes.csvAttributes == null)
+            if(config.dataQuality.validateFileHeader && config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes == null)
                 throw new PipelineException("In the 'dataQuality' section, 'validateFileHeader' = true is only valid for delimited (CSV) files")
             if(config.dataQuality.validationSchema != null) {
-                if(config.source.fileAttributes.jsonAttributes == null && config.source.fileAttributes.xmlAttributes == null)
+                if(config.source.fileAttributes != null && config.source.fileAttributes.jsonAttributes == null && config.source.fileAttributes.xmlAttributes == null)
                     throw new PipelineException("In the 'dataQuality' section, 'validationSchema' is only valid for JSON or XML files")
             }
             if(config.dataQuality.rowRules != null) {
@@ -103,7 +138,7 @@ object DatasetValidatorUtil {
 
         // Transformation
         if(config.transformation != null) {
-            if(config.source.fileAttributes.csvAttributes == null)
+            if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes == null)
                 throw new PipelineException("A 'transformation' section is only supported for CSV files")
             if(config.transformation.rowFunctions != null) {
                 config.transformation.rowFunctions.forEach(function => {
@@ -117,7 +152,7 @@ object DatasetValidatorUtil {
 
         // Destination object store
         if(config.destination.objectStore != null) {
-            if(config.source.fileAttributes.csvAttributes == null)
+            if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes == null)
                 throw new PipelineException("A destination of 'objectStore' is only supported for CSV files")
             if(config.destination.objectStore.prefixKey == null)
                 throw new PipelineException("If the 'destination.objectStore' section is defined, the 'destination.objectStore.prefixKey' must be defined")
@@ -179,7 +214,7 @@ object DatasetValidatorUtil {
                         throw new PipelineException("destination.database.snowflake.createSemiStructuredFieldAs invalid value.  Valid values are 'VARIANT', 'OBJECT' and 'ARRAY")
                     }
                 }
-                if(config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null) {
+                if(config.source.fileAttributes != null && (config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null)) {
                     if(config.destination.database.snowflake.keyFields != null)
                         throw new PipelineException("destination.database.snowflake.keyFields are not supported for JSON or XML source files. You can place the JSON or XML in a column in a CSV file as an alternative.")
                 }
@@ -193,7 +228,7 @@ object DatasetValidatorUtil {
 
             // Redshift
             if(config.destination.database.redshift != null) {
-                if(config.source.fileAttributes.xmlAttributes != null)
+                if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null)
                     throw new PipelineException("Redshift does not support the ingestion of XML data")
                 if(config.destination.database.redshift.keyFields != null) {
                     config.destination.database.redshift.keyFields.forEach(field => {
@@ -205,7 +240,7 @@ object DatasetValidatorUtil {
         }
 
         // Validate semi-structured (JSON, XML)
-        if(config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null)
+        if(config.source.fileAttributes != null && (config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null))
             validateSemiStructured(config)
 
         // Validate columns
@@ -257,11 +292,11 @@ object DatasetValidatorUtil {
             throw new PipelineException(message)
         if(config.source.schemaProperties.fields.get(0).`type`.compareToIgnoreCase("string") != 0)
             throw new PipelineException(message)
-        if(config.source.fileAttributes.jsonAttributes != null) {
+        if(config.source.fileAttributes != null && config.source.fileAttributes.jsonAttributes != null) {
             if(config.source.schemaProperties.fields.get(0).name.compareToIgnoreCase("_json") != 0)
                 throw new PipelineException(message)
         }
-        if(config.source.fileAttributes.xmlAttributes != null) {
+        if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null) {
             if(config.source.schemaProperties.fields.get(0).name.compareToIgnoreCase("_xml") != 0)
                 throw new PipelineException(message)
         }
@@ -272,18 +307,18 @@ object DatasetValidatorUtil {
                 throw new PipelineException(message)
             if(config.destination.schemaProperties.fields.get(0).`type`.compareToIgnoreCase("string") != 0)
                 throw new PipelineException(message)
-            if(config.source.fileAttributes.jsonAttributes != null) {
+            if(config.source.fileAttributes != null && config.source.fileAttributes.jsonAttributes != null) {
                 if(config.destination.schemaProperties.fields.get(0).name.compareToIgnoreCase("_json") != 0)
                     throw new PipelineException(message)
             }
-            if(config.source.fileAttributes.xmlAttributes != null) {
+            if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null) {
                 if(config.destination.schemaProperties.fields.get(0).name.compareToIgnoreCase("_xml") != 0)
                     throw new PipelineException(message)
             }
         }
     }
 
-    def lowercaseConfig(config: DatasetConfig): DatasetConfig = {
+    def modify(config: DatasetConfig): DatasetConfig = {
         val sourceSchemaProperties = {
             if(config.source.schemaProperties != null) {
                 val fields = config.source.schemaProperties.fields.asScala.map(field => SchemaField(field.name.toLowerCase, field.`type`.toLowerCase)).toList.asJava
@@ -296,11 +331,11 @@ object DatasetValidatorUtil {
         val destinationSchemaProperties = {
             if (config.destination.schemaProperties != null) {
                 // For JSON or XML fields, define 1 field as a string
-                if(config.source.fileAttributes.jsonAttributes != null) {
+                if(config.source.fileAttributes != null && config.source.fileAttributes.jsonAttributes != null) {
                     val fields = List(SchemaField("_json", "string")).asJava
                     SchemaProperties(config.destination.schemaProperties.dbName, fields)
                 }
-                else if(config.source.fileAttributes.xmlAttributes != null) {
+                else if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null) {
                     val fields = List(SchemaField("_xml", "string")).asJava
                     SchemaProperties(config.destination.schemaProperties.dbName, fields)
                 }
@@ -325,7 +360,7 @@ object DatasetValidatorUtil {
                         null
                 }
                 val fileFormat = {
-                    if(config.source.fileAttributes.unstructuredAttributes != null)
+                    if(config.source.fileAttributes != null && config.source.fileAttributes.unstructuredAttributes != null)
                         null
                     else if(config.destination.objectStore.fileFormat != null)
                         config.destination.objectStore.fileFormat
@@ -394,7 +429,27 @@ object DatasetValidatorUtil {
                 null
         }
 
-        val source = config.source.copy(schemaProperties = sourceSchemaProperties)
+        val fileAttributes = {
+            // If we have database attributes, automatically enforce the file attributes
+            if(config.source.databaseAttributes != null) {
+                val delimiter = {
+                    if(config.source.databaseAttributes.outputDelimiter != null)
+                        config.source.databaseAttributes.outputDelimiter
+                    else
+                        ","
+                }
+                val csvAttributes = CsvAttributes(
+                    delimiter = delimiter,
+                    header = false,
+                    "UTF-8"
+                )
+                FileAttributes(csvAttributes, null, null, null)
+            }
+            else
+                config.source.fileAttributes
+        }
+
+        val source = config.source.copy(schemaProperties = sourceSchemaProperties, fileAttributes = fileAttributes)
         val destination = Destination(destinationSchemaProperties, database, objectStore)
 
         config.copy(source = source, destination = destination)
