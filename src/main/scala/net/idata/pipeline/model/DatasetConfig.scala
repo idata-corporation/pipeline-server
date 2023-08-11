@@ -106,6 +106,8 @@ case class UnstructuredAttributes(
 case class DatabaseAttributes(
                                  `type`: String,
                                  postgresSecretsName: String,
+                                 mssqlSecretsName: String,
+                                 mysqlSecretsName: String,
                                  cronExpression: String,
                                  schema: String,
                                  table: String,

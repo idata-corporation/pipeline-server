@@ -31,11 +31,11 @@ case class DatasetPullTable(
                            )
 
 object DataPullTableUtil {
-    private val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    private val dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
 
     def initialize(dataset: String, cronExpression: String): Unit = {
         val nextPullDate = generateNextPullDate(cronExpression)
-        val nextPullDateAsString = formatter.format(nextPullDate)
+        val nextPullDateAsString = dateFormatter.format(nextPullDate)
 
         val datasetPull = DatasetPull(dataset, nextPullDateAsString, null)
         val gson = new Gson()
@@ -51,7 +51,7 @@ object DataPullTableUtil {
         })
     }
 
-    def update(dataset: String, nextPullDate: Date, lastPullTimestampUsed: Date): Unit = {
+    def update(dataset: String, nextPullDate: Date, lastPullTimestampUsed: String): Unit = {
         val gson = new Gson()
 
         // Get the existing pull information
@@ -62,13 +62,13 @@ object DataPullTableUtil {
 
         val newNextPullDate = {
             if(nextPullDate != null)
-                formatter.format(nextPullDate)
+                dateFormatter.format(nextPullDate)
             else
                 datasetPull.nextPullDate
         }
         val newLastPullTimestampUsed = {
             if(lastPullTimestampUsed != null)
-                formatter.format(lastPullTimestampUsed)
+                lastPullTimestampUsed
             else
                 datasetPull.lastPullTimestampUsed
         }
@@ -83,7 +83,7 @@ object DataPullTableUtil {
             .getOrElse(throw new PipelineException("The table: " + PipelineEnvironment.values.dataPullTableName + " does not contain an entry for the dataset: " + dataset + ", re-register the dataset with the API"))
         val gson = new Gson()
         val datasetPull = gson.fromJson(json, classOf[DatasetPull])
-        formatter.parse(datasetPull.nextPullDate)
+        dateFormatter.parse(datasetPull.nextPullDate)
     }
 
     def generateNextPullDate(cronExpression: String): Date = {

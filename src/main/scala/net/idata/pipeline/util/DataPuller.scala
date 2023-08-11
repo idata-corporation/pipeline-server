@@ -41,17 +41,16 @@ class DataPuller {
                 val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, datasetPull.dataset)
 
                 // Before we pull the data, save the actual pull data date and generate the next pull date from the cron expression
-                val actualDataPullDate = new Date()
                 val generatedNextPullDate = DataPullTableUtil.generateNextPullDate(config.source.databaseAttributes.cronExpression)
 
-                val data = pull(config, datasetPull)
+                val (data, lastTimestamp) = pull(config, datasetPull)
                 if(data == null) {
                     // Re-initialize the data pull table to reset the next pull date request
                     DataPullTableUtil.update(config.name, generatedNextPullDate, null)
                 }
                 else {
                     // Re-initialize the data pull table to reset the next pull date request and the last pull date
-                    DataPullTableUtil.update(config.name, generatedNextPullDate, actualDataPullDate)
+                    DataPullTableUtil.update(config.name, generatedNextPullDate, lastTimestamp)
 
                     // Write the data to the raw bucket
                     val rawFilename = {
@@ -66,12 +65,20 @@ class DataPuller {
         })
     }
 
-    private def pull(config: DatasetConfig, datasetPull: DatasetPull): String = {
+    private def pull(config: DatasetConfig, datasetPull: DatasetPull): (String, String) = {
         logger.info("Attempting to pull data for dataset: " + config.name)
         val databaseAttributes = config.source.databaseAttributes
 
         val connection = getDatabaseConnection(databaseAttributes)
         val rows = new util.ArrayList[String]()
+        var lastTimestamp:String = null
+
+        val outputDelimiter = {
+            if(databaseAttributes.outputDelimiter == null)
+                ","
+            else
+                databaseAttributes.outputDelimiter
+        }
 
         try {
             val sql = new StringBuilder()
@@ -79,12 +86,7 @@ class DataPuller {
                 sql.append(databaseAttributes.sqlOverride)
             }
             else {
-                val fieldNames = {
-                    if (databaseAttributes.includeFields == null)
-                        config.source.schemaProperties.fields.asScala.map(_.name).toList
-                    else
-                        databaseAttributes.includeFields.asScala
-                }
+                val fieldNames = getFieldNames(config)
                 sql.append("select ")
                 sql.append(fieldNames.mkString(","))
                 sql.append(" from ")
@@ -93,47 +95,59 @@ class DataPuller {
                     sql.append(" where ")
                     sql.append(databaseAttributes.timestampFieldName + " > '" + datasetPull.lastPullTimestampUsed + "'")
                 }
+                sql.append(" order by " + fieldNames.last)
             }
 
             // Do the query
             logger.info("For dataset: " + config.name + ", pull data query: " + sql.mkString)
             val preparedStatement = connection.prepareStatement(sql.mkString)
             val resultSet = preparedStatement.executeQuery()
-            val outputDelimiter = {
-                if(databaseAttributes.outputDelimiter == null)
-                    ","
-                else
-                    databaseAttributes.outputDelimiter
-            }
 
             val resultSetMetadata = resultSet.getMetaData
             while(resultSet.next()) {
                 val row = (1 until resultSetMetadata.getColumnCount + 1).toList.map(index => {
                     val dataType = resultSetMetadata.getColumnType(index)
+                    val columnName = resultSetMetadata.getColumnName(index)
                     dataType match {
-                        case Types.BOOLEAN =>
+                        case Types.BOOLEAN | Types.BIT =>
                             resultSet.getBoolean(index).toString
                         case Types.TINYINT | Types.SMALLINT | Types.INTEGER =>
                             resultSet.getInt(index).toString
-                        case Types.BIGINT | Types.NUMERIC =>
+                        case Types.BIGINT =>
                             resultSet.getLong(index).toString
-                        case Types.CHAR | Types.VARCHAR =>
-                            resultSet.getString(index)
-                        case Types.FLOAT =>
+                        case Types.NUMERIC | Types.DECIMAL =>
+                            resultSet.getBigDecimal(index).toString
+                        case Types.REAL =>
                             resultSet.getFloat(index).toString
-                        case Types.DECIMAL | Types.DOUBLE | Types.REAL =>
+                        case Types.FLOAT | Types.DOUBLE =>
                             resultSet.getDouble(index).toString
                         case Types.TIME | Types.TIME_WITH_TIMEZONE =>
                             resultSet.getTime(index).toString
                         case Types.TIMESTAMP | Types.TIMESTAMP_WITH_TIMEZONE =>
-                            resultSet.getTimestamp(index).toString
+                            if(columnName.compareToIgnoreCase(databaseAttributes.timestampFieldName) == 0) {
+                                val timestamp = resultSet.getTimestamp(index)
+                                val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS")
+                                val timestampAsString = formatter.format(timestamp)
+                                if(timestamp.toString.length > timestampAsString.length)
+                                    timestamp.toString
+                                else
+                                    timestampAsString
+                            }
+                            else
+                                resultSet.getTimestamp(index).toString
                         case Types.DATE =>
                             resultSet.getDate(index).toString
+                        case Types.CHAR | Types.VARCHAR | Types.LONGVARCHAR =>
+                            resultSet.getString(index)
                         case _ =>
-                            throw new PipelineException("Data type: " + resultSetMetadata.getColumnTypeName(index) + " is not currently supported, please contact customer support")
+                            throw new PipelineException("Column type name: " + resultSetMetadata.getColumnTypeName(index) + ",column type: " + resultSetMetadata.getColumnType(index) + " is not currently supported, please contact customer support")
                     }
                 })
-                val rowWithDelimiter = row.mkString(outputDelimiter)
+                lastTimestamp = row.last
+
+                // Drop the timestamp column at the end
+                val rowWithDelimiter = row.dropRight(1).mkString(outputDelimiter)
+
                 rows.add(rowWithDelimiter)
             }
         }
@@ -142,9 +156,9 @@ class DataPuller {
         }
 
         if(rows.size() == 0)
-            null
+            (null, null)
         else
-            rows.asScala.mkString("\n")
+            (rows.asScala.mkString("\n"), lastTimestamp)
     }
 
     private def getDatabaseConnection(databaseAttributes: DatabaseAttributes): Connection = {
@@ -157,8 +171,22 @@ class DataPuller {
                     .getOrElse(throw new PipelineException("Secrets not found for secret name: " + databaseAttributes.postgresSecretsName))
                 (secrets, databaseAttributes.postgresSecretsName)
             }
+            else if(databaseAttributes.mssqlSecretsName != null) {
+                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
+
+                val secrets = SecretsManagerUtil.getSecretMap(databaseAttributes.mssqlSecretsName)
+                    .getOrElse(throw new PipelineException("Secrets not found for secret name: " + databaseAttributes.mssqlSecretsName))
+                (secrets, databaseAttributes.mssqlSecretsName)
+            }
+            else if(databaseAttributes.mysqlSecretsName != null) {
+                Class.forName("com.mysql.jdbc.Driver")
+
+                val secrets = SecretsManagerUtil.getSecretMap(databaseAttributes.mysqlSecretsName)
+                    .getOrElse(throw new PipelineException("Secrets not found for secret name: " + databaseAttributes.mssqlSecretsName))
+                (secrets, databaseAttributes.mssqlSecretsName)
+            }
             else {
-                throw new PipelineException("")
+                throw new PipelineException("The dataset configuration 'source.databaseAttributes' does not contain a database secrets name")
             }
         }
 
@@ -173,5 +201,29 @@ class DataPuller {
             throw new PipelineException("The 'password' does not exist in the Secrets Manager secrets: " + secretsName)
 
         DriverManager.getConnection(jdbcUrl, username, password)
+    }
+
+    private def getFieldNames(config: DatasetConfig): List[String] = {
+        val databaseAttributes = config.source.databaseAttributes
+
+        // For mssql, reserved columm names must be surrounded with brackets (e.g. '[column_name]').  But surrounding all columns also works
+        if(databaseAttributes.`type`.compareToIgnoreCase("mssql") == 0) {
+            val fieldNames = {
+                if (databaseAttributes.includeFields == null)
+                    config.source.schemaProperties.fields.asScala.map("[" + _.name + "]").toList
+                else
+                    databaseAttributes.includeFields.asScala.map("[" + _ + "]").toList
+            }
+            fieldNames ::: List("[" + config.source.databaseAttributes.timestampFieldName + "]")
+        }
+        else {
+            val fieldNames = {
+                if (databaseAttributes.includeFields == null)
+                    config.source.schemaProperties.fields.asScala.map(_.name).toList
+                else
+                    databaseAttributes.includeFields.asScala.toList
+            }
+            fieldNames ::: List(config.source.databaseAttributes.timestampFieldName)
+        }
     }
 }

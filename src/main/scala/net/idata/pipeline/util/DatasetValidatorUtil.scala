@@ -76,10 +76,23 @@ object DatasetValidatorUtil {
         if(config.source.databaseAttributes != null) {
             if(config.source.databaseAttributes.`type` == null)
                 throw new PipelineException("If 'source.databaseAttributes' is defined, the 'type' field must also be defined")
-            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("postgres") != 0)
-                throw new PipelineException("The only supported 'databaseAttributes.type' is currently 'postgres'")
-            if(config.source.databaseAttributes.postgresSecretsName == null)
-                throw new PipelineException("If 'source.databaseAttributes' is defined, the 'postgresSecretsName' field must also be defined")
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("postgres") != 0 &&
+                config.source.databaseAttributes.`type`.compareToIgnoreCase("mssql") != 0 &&
+                config.source.databaseAttributes.`type`.compareToIgnoreCase("mysql") != 0) {
+                throw new PipelineException("The only supported 'databaseAttributes.type's are currently 'postgres', 'mysql' and 'mssql'")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("postgres") == 0) {
+                if(config.source.databaseAttributes.postgresSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'postgresSecretsName' field must also be defined")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("mssql") == 0) {
+                if(config.source.databaseAttributes.mssqlSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'mssqlSecretsName' field must also be defined")
+            }
+            if(config.source.databaseAttributes.`type`.compareToIgnoreCase("mysql") == 0) {
+                if(config.source.databaseAttributes.mysqlSecretsName == null)
+                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'mysqlSecretsName' field must also be defined")
+            }
             if(config.source.databaseAttributes.cronExpression == null)
                 throw new PipelineException("If 'source.databaseAttributes' is defined, the 'cronExpression' field must also be defined")
             if(!CronExpression.isValidExpression(config.source.databaseAttributes.cronExpression))

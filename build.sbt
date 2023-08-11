@@ -54,7 +54,9 @@ libraryDependencies ++= Seq(
     "org.apache.commons" % "commons-csv" % "1.9.0",
     "io.deephaven" % "deephaven-csv" % "0.8.0",
     "org.quartz-scheduler" % "quartz" % "2.3.2",
-    "org.postgresql" % "postgresql" % "42.6.0"
+    "org.postgresql" % "postgresql" % "42.6.0",
+    "com.microsoft.sqlserver" % "mssql-jdbc" % "12.2.0.jre8",
+    "mysql" % "mysql-connector-java" % "8.0.32"
 )
 
 Compile / unmanagedJars += file("./jars/redshift-jdbc42-2.1.0.9.jar")
