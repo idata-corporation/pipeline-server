@@ -2,7 +2,7 @@ package net.idata.pipeline
 
 /*
 IData Pipeline
-Copyright (C) 2023 IData Corporation (http://www.idata.net)
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+import net.idata.pipeline.controller.KafkaConsumerRunner
 import net.idata.pipeline.model.PipelineEnvironment
 import net.idata.pipeline.util.NotificationUtil
 import org.slf4j.{Logger, LoggerFactory}
@@ -35,6 +36,9 @@ class StartupRunner extends ApplicationRunner {
 
     @Value("${useApiKeys}")
     var useApiKeys: Boolean = _
+
+    @Value("${cdc.debezium.kafkaTopic}")
+    var cdcDebeziumKafkaTopic: String = _
 
     @Value("${aws.region}")
     var region: String = _
@@ -57,6 +61,8 @@ class StartupRunner extends ApplicationRunner {
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
+        if(PipelineEnvironment.values.cdcDebeziumKafkaTopic != null)
+            initKafkaConsumer()
     }
 
     private def initPipelineEnvironment(): Unit = {
@@ -90,9 +96,15 @@ class StartupRunner extends ApplicationRunner {
             useApiKeys,
             apiKeysSecretName,
             snowflakeSecretName,
-            redshiftSecretName
+            redshiftSecretName,
+            cdcDebeziumKafkaTopic
         )
 
         PipelineEnvironment.init(pipelineEnvironment)
+    }
+
+    private def initKafkaConsumer(): Unit = {
+        val thread = new Thread(new KafkaConsumerRunner())
+        thread.start()
     }
 }

@@ -2,7 +2,7 @@ package net.idata.pipeline.util
 
 /*
 IData Pipeline
-Copyright (C) 2023 IData Corporation (http://www.idata.net)
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -39,7 +39,8 @@ class APIKeyValidatorTest extends AnyFunSuite {
         true,
         "my-secret-name",
         null,
-        null)
+        null,
+        cdcDebeziumKafkaTopic = null)
 
     test("send null key") {
         val thrown = intercept[PipelineException] {

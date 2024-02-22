@@ -2,7 +2,7 @@ package net.idata.pipeline.model
 
 /*
 IData Pipeline
-Copyright (C) 2023 IData Corporation (http://www.idata.net)
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,5 +40,6 @@ case class PipelineEnvironment(
                                   useApiKeys: Boolean,
                                   apiKeysSecretName: String,
                                   snowflakeSecretName: String,
-                                  redshiftSecretName: String
+                                  redshiftSecretName: String,
+                                  cdcDebeziumKafkaTopic: String
                               )

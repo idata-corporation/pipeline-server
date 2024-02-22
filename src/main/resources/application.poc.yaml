@@ -20,6 +20,9 @@ schedule:
   checkDatabaseSourceQueries: "30000"
 environment: idata-poc
 useApiKeys: "false"
+cdc:
+  debezium:
+    kafkaTopic: testdb-topic
 aws:
   region: us-east-1
   secretsManager:

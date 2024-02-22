@@ -233,6 +233,9 @@ v2.2.4
 08-31-2022 - Fixed issues with the Dataset Status objects being returned from the REST API
 09-23-2022 - Fixed issues with the AWS Marketplace Metering API calls
 
+v2.2.5
+11-09-2022 - Fixed DynamobDb eventual consistency upon reading Trigger configurations
+
 v2.3.0
 12-20-2022 - Major refactoring of the IData pipeline-core Github project (private) into this pipeline-server (open-source) project, removed spark (EMR, EKS on EMR) dependencies
 12-20-2022 - Refactored to leverage Athena for parquet generation for more efficiency
@@ -249,3 +252,7 @@ v2.3.3
 08-09-2023 - New feature - Added a database source for pulling data from Postgres based upon a dataset configuration cron value into the pipeline
 08-10-2023 - Added support for pulling data from Microsoft SQL Server
 08-11-2023 - Added support for pulling data from MySQL
+
+v2.3.4
+02-21-2024 - Changed the header on all files with 2024 as the copyright year
+02-21-2024 - Added Change Data Capture (CDC) database support using Kafka (AWS MSK) and Debezium Connectors

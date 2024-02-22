@@ -1,5 +1,5 @@
 /*
- Copyright 2023 IData Corporation (http://www.idata.net)
+ Copyright 2024 IData Corporation (http://www.idata.net)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 name := "pipeline-server"
 ThisBuild / organization := "net.idata"
 ThisBuild / scalaVersion := "2.12.17"
-ThisBuild / version := "2.3.3"
+ThisBuild / version := "2.3.4"
 
 lazy val root = (project in file(".")).
     enablePlugins(BuildInfoPlugin).
@@ -56,7 +56,9 @@ libraryDependencies ++= Seq(
     "org.quartz-scheduler" % "quartz" % "2.3.2",
     "org.postgresql" % "postgresql" % "42.6.0",
     "com.microsoft.sqlserver" % "mssql-jdbc" % "12.2.0.jre8",
-    "mysql" % "mysql-connector-java" % "8.0.32"
+    "mysql" % "mysql-connector-java" % "8.0.32",
+    "org.apache.kafka" %% "kafka" % "3.5.1",
+    "org.apache.kafka" % "kafka-clients" % "3.5.1"
 )
 
 Compile / unmanagedJars += file("./jars/redshift-jdbc42-2.1.0.9.jar")
