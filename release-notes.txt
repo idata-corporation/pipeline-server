@@ -256,3 +256,4 @@ v2.3.3
 v2.3.4
 02-21-2024 - Changed the header on all files with 2024 as the copyright year
 02-21-2024 - Added Change Data Capture (CDC) database support using Kafka (AWS MSK) and Debezium Connectors
+02-28-2024 - Moved to a multi-module project and started to integrate Spark transformation ingestion code as an alternative to Athena ingestion

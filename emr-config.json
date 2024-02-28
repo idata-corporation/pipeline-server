@@ -1,0 +1,31 @@
+[{
+		"classification": "emrfs-site",
+		"properties": {
+			"fs.s3.multipart.th.fraction.parts.completed": "0.99"
+		},
+		"configurations": []
+	},
+	{
+		"classification": "spark-defaults",
+		"properties": {
+			"spark.shuffle.service.enabled": "false",
+			"spark.dynamicAllocation.enabled": "false",
+			"spark.rpc.message.maxSize": "1024",
+			"spark.sql.hive.convertMetastoreParquet": "false",
+			"spark.sql.legacy.parquet.datetimeRebaseModeInRead": "LEGACY",
+			"spark.sql.legacy.parquet.int96RebaseModeInRead": "LEGACY",
+			"spark.driver.maxResultSize": "8192M",
+			"spark.network.timeout": "600s",
+			"spark.sql.sources.partitionOverwriteMode": "dynamic",
+			"spark.sql.legacy.parquet.datetimeRebaseModeInWrite": "LEGACY",
+			"spark.sql.legacy.timeParserPolicy": "LEGACY",
+			"spark.sql.session.timeZone": "America/New_York",
+			"spark.serializer": "org.apache.spark.serializer.KryoSerializer",
+			"spark.sql.orc.enableVectorizedReader": "false",
+			"spark.executor.extraJavaOptions": "-Duser.timezone=America/New_York",
+			"spark.sql.legacy.parquet.int96RebaseModeInWrite": "LEGACY",
+			"spark.driver.extraJavaOptions": "-Duser.timezone=America/New_York"
+		},
+		"configurations": []
+	}
+]
