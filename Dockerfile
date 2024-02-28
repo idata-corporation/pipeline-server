@@ -1,9 +1,10 @@
 FROM openjdk:11
 RUN apt update -y && \
   apt upgrade -y && \
+  apt-get install python3.10 -y && \
   apt-get clean && apt-get autoremove --purge && \
   apt-get remove python3.9 -y && apt-get autoremove -y
-ARG JAR_FILE=target/scala-*/*.jar
+ARG JAR_FILE=pipelineserver/target/scala-*/*.jar
 RUN mkdir -p /usr/src/pipelineserver /usr/src/pipelineserver/config
 COPY ${JAR_FILE} /usr/src/pipelineserver/pipelineserver.jar
 COPY docker-init.sh /usr/src/pipelineserver/docker-init.sh
