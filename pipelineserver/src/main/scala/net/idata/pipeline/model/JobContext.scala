@@ -22,8 +22,6 @@ import net.idata.pipeline.common.model.{DatasetConfig, DatasetMetadata}
 import net.idata.pipeline.common.util.StatusUtil
 
 case class JobContext(
-                         bucket: String,
-                         key: String,
                          pipelineToken: String,
                          metadata: DatasetMetadata,
                          data: Data,

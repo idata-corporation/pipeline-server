@@ -60,7 +60,7 @@ class FileNotifier {
 
             statusUtil.info("end", "Process completed successfully")
 
-            JobContext(bucket, key, pipelineToken, metadata, data, config, INITIALIZED, null, statusUtil)
+            JobContext(pipelineToken, metadata, data, config, INITIALIZED, null, statusUtil)
         } catch {
             case e: Exception =>
                 statusUtil.error("end", "Process completed, error: " + Throwables.getStackTraceAsString(e))

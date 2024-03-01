@@ -68,6 +68,7 @@ class StartupRunner extends ApplicationRunner {
     private def initPipelineEnvironment(): Unit = {
         // Set default values based upon the environment name
         val fileNotifierQueue = environment + "-file-notifier"
+        val cdcMessageQueue = environment + "-cdc-message.fifo"
         val datasetTableName = environment + "-dataset"
         val archivedMetadataTableName = environment + "-archived-metadata"
         val datasetStatusTableName = environment + "-dataset-status"
@@ -87,6 +88,7 @@ class StartupRunner extends ApplicationRunner {
             region,
             fileNotifierQueue,
             ttlFileNotifierQueueMessages,
+            cdcMessageQueue,
             notifyTopicArn,
             datasetTableName,
             archivedMetadataTableName,

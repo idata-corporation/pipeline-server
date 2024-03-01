@@ -40,6 +40,18 @@ data "aws_iam_policy_document" "file_notifier_policy_document" {
   }
 }
 
+# cdc-message
+resource "aws_sqs_queue" "cdc_message" {
+  name = "${var.environment_name}-cdc-message.fifo"
+  sqs_managed_sse_enabled     = true
+  fifo_queue                  = true
+  content_based_deduplication = true
+
+  tags = {
+    name = var.environment_name
+  }
+}
+
 resource "aws_s3_bucket_notification" "raw_notification" {
   bucket = "${var.environment_name}-raw"
 

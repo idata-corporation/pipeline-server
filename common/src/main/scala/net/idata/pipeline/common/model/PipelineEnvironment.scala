@@ -31,6 +31,7 @@ case class PipelineEnvironment(
                                   region: String,
                                   fileNotifierQueue: String,
                                   ttlFileNotifierQueueMessages: Int,
+                                  cdcMesssageQueue: String,
                                   notifyTopicArn: String,
                                   datasetTableName: String,
                                   archivedMetadataTableName: String,

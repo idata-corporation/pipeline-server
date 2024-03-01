@@ -27,7 +27,7 @@ import net.idata.pipeline.common.model.aws.SQSMessageS3
 import net.idata.pipeline.common.util.{NoSQLDbUtil, QueueUtil}
 import net.idata.pipeline.controller.{FileNotifier, JobRunner}
 import net.idata.pipeline.model._
-import net.idata.pipeline.util.DataPuller
+import net.idata.pipeline.util.{DataPuller, KafkaMessageProcessor}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -48,6 +48,27 @@ class ScheduledBatchTasks {
         } catch {
             case e: Exception =>
                 logger.error("checkForDatabaseSourceQueries error: " + Throwables.getStackTraceAsString(e))
+        }
+    }
+
+    @Scheduled(fixedRateString = "${schedule.checkCDCMessageQueue}")
+    private def checkCDCMessageQueue(): Unit = {
+        try {
+            if(isAppInitialized) {
+                synchronized {
+                    val messages = QueueUtil.receiveMessages(PipelineEnvironment.values.cdcMesssageQueue, maxMessages = 10)
+
+                    val gson = new Gson
+                    messages.asScala.foreach(message => {
+                        val cdcMessage = gson.fromJson(message.getBody, classOf[CDCMessage])
+                        new KafkaMessageProcessor().process(cdcMessage)
+                        QueueUtil.deleteMessage(PipelineEnvironment.values.cdcMesssageQueue, message.getReceiptHandle)
+                    })
+                }
+            }
+        } catch {
+            case e: Exception =>
+                logger.error("checkCDCMessageQueue error: " + Throwables.getStackTraceAsString(e))
         }
     }
 
