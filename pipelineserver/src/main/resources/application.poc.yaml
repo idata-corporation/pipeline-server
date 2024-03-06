@@ -29,7 +29,7 @@ aws:
   secretsManager:
     apiKeysSecretName: idata-poc-api-keys
     snowflakeSecretName: idata-poc-snowflakesecrets
-    redshiftSecretName: idata-redshiftsecrets
+    redshiftSecretName: idata-redshift-secrets-smartx-test
   sns:
     sendNotifications: "true"
   sqs:

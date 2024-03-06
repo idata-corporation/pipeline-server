@@ -23,6 +23,7 @@ import net.idata.pipeline.common.model.{Notification, PipelineEnvironment, Pipel
 import net.idata.pipeline.common.util.aws.SecretsManagerUtil
 import net.idata.pipeline.common.util.{GuidV5, NotificationUtil}
 import net.idata.pipeline.model._
+import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.{Connection, DriverManager, Statement}
 import java.time.Instant
@@ -30,6 +31,7 @@ import java.util.Properties
 import scala.collection.JavaConverters._
 
 class RedshiftLoader(jobContext: JobContext) {
+    private val logger: Logger = LoggerFactory.getLogger(classOf[RedshiftLoader])
     private val config = jobContext.config
     private val statusUtil = jobContext.statusUtil
     
@@ -77,21 +79,48 @@ class RedshiftLoader(jobContext: JobContext) {
         }
     }
 
+    def executeSQL(sql: String): Unit = {
+        val secrets = retrieveSecrets()
+
+        Class.forName("com.amazon.redshift.jdbc42.Driver")
+
+        var conn: Connection = null
+        var statement: java.sql.Statement = null
+
+        try {
+            val properties = new Properties()
+            properties.setProperty("user", secrets.username)
+            properties.setProperty("password", secrets.password)
+            logger.info("jdbc url: " + secrets.jdbcUrl)
+            conn = DriverManager.getConnection(secrets.jdbcUrl, properties)
+            logger.info("Redshift connection acquired")
+
+            statement = conn.createStatement()
+            statement.execute(sql)
+        } finally {
+            if (statement != null)
+                statement.close()
+            if (conn != null)
+                conn.close()
+        }
+    }
+
     private def retrieveSecrets(): RedshiftSecrets = {
-        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.redshiftSecretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager"))
+        val secretName = PipelineEnvironment.values.redshiftSecretName
+        val dbSecret = SecretsManagerUtil.getSecretMap(secretName)
+            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager secret: " + secretName))
         val username = dbSecret.get("username")
         if (username == null)
-            throw new PipelineException("Could not retrieve the Redshift username from Secrets Manager")
+            throw new PipelineException("Could not retrieve the Redshift username from Secrets Manager secret: " + secretName)
         val password = dbSecret.get("password")
         if (password == null)
-            throw new PipelineException("Could not retrieve the Redshift password from Secrets Manager")
+            throw new PipelineException("Could not retrieve the Redshift password from Secrets Manager secret: " + secretName)
         val jdbcUrl = dbSecret.get("jdbcUrl")
         if (jdbcUrl == null)
-            throw new PipelineException("Could not retrieve the Redshift jdbcUrl from Secrets Manager")
+            throw new PipelineException("Could not retrieve the Redshift jdbcUrl from Secrets Manager secret: " + secretName)
         val dbRole = dbSecret.get("dbRole")
         if (dbRole == null)
-            throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager")
+            throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager secret: " + secretName)
 
         RedshiftSecrets(
             username,

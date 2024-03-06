@@ -10,8 +10,8 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.nio.charset.StandardCharsets
-import java.util.{Base64, Properties}
 import java.util.regex.Pattern
+import java.util.{Base64, Properties}
 import scala.collection.JavaConverters._
 
 class KafkaConsumerRunner() extends Runnable {

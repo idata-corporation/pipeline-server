@@ -1,8 +1,9 @@
 package net.idata.pipeline.util
 
-import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
+import com.google.common.base.Throwables
+import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.{DatasetConfigIO, GuidV5, ObjectStoreSQLUtil}
-import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
+import net.idata.pipeline.model.{CDCMessage, DebeziumMessage, JobContext}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.nio.charset.StandardCharsets
@@ -68,29 +69,42 @@ class KafkaMessageProcessor() {
             val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, message.datasetName)
             if(config == null)
                 throw new PipelineException("CDC message error, dataset configuration: " + message.datasetName + " was not found in the NoSQL table: " + PipelineEnvironment.values.datasetTableName)
-            if(config.destination.objectStore == null)
-                throw new PipelineException("CDC message error, only objectStore is supported for the destination of a CDC message")
-            if(!config.destination.objectStore.useIceberg)
-                throw new PipelineException("CDC message error, only objectStore Iceberg tables are supported for the destination of a CDC message")
+            if(config.destination.objectStore == null && config.destination.database == null)
+                throw new PipelineException("CDC message error, only objectStore and databases are supported for the destination of a CDC message")
+            if(config.destination.objectStore != null && !config.destination.objectStore.useIceberg)
+                throw new PipelineException("CDC message error, when the destination is objectStore, only Iceberg tables are supported for the destination of a CDC message")
 
             val sql = {
                 if(message.isInsert)
-                    CDCUtil.insert(config, message)
+                    GenerateSQLUtil.insert(config, message)
                 else if(message.isUpdate)
-                    CDCUtil.update(config, message)
+                    GenerateSQLUtil.update(config, message)
                 else
-                    CDCUtil.delete(config, message)
+                    GenerateSQLUtil.delete(config, message)
             }
+            logger.info("CDC SQL created: " + sql)
+            writeToStore(config, sql)
+        }
+        catch {
+            case e: Exception =>
+                logger.info("Error writing CDC message to store: " + Throwables.getStackTraceAsString(e))
+            // TODO - put this message in a queue or something to save it
+        }
+    }
 
-            logger.info("CDC Athena SQL created: " + sql)
+    private def writeToStore(config: DatasetConfig, sql: String): Unit = {
+        // Write to object store?
+        if(config.destination.objectStore != null) {
             val databaseName = config.destination.schemaProperties.dbName
             val outputPath = "s3://" + PipelineEnvironment.values.environment + "-temp/athena/" + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + ".out"
             ObjectStoreSQLUtil.sql(databaseName, sql, outputPath)
         }
-        catch {
-            case e: Exception =>
-                logger.info(e.getMessage)
-            // TODO - put this message in a queue or something to save it
+        else if(config.destination.database != null && config.destination.database.snowflake != null) {
         }
+        else if(config.destination.database != null && config.destination.database.redshift != null) {
+            new RedshiftLoader(JobContext(null, null, null, null, null, null, null)).executeSQL(sql)
+        }
+        else
+            throw new PipelineException("Destinations supported for CDC are object store, Redshift and Snowflake")
     }
 }

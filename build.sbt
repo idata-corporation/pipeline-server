@@ -29,7 +29,8 @@ lazy val pipelineserver = project
         name := "pipelineserver",
         assemblySettings,
         libraryDependencies ++= commonDependencies,
-        libraryDependencies ++= commonSpringDependencies
+        libraryDependencies ++= commonSpringDependencies,
+        Compile / unmanagedJars += file("./jars/redshift-jdbc42-2.1.0.9.jar")
     )
     .dependsOn(
         common

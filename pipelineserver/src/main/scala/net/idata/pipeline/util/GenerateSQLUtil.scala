@@ -6,15 +6,18 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
-object CDCUtil {
+object GenerateSQLUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
     def insert(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
-        val databaseName = config.destination.schemaProperties.dbName
         val columns = message.after.keys.toList
 
-        sql.append("INSERT INTO " + databaseName + "." + config.name + " (" + columns.mkString(", ") + ")")
+        if(config.destination.objectStore != null)
+            sql.append("INSERT INTO " + config.destination.schemaProperties.dbName + "." + config.name + " (" + columns.mkString(", ") + ")")
+        if(config.destination.database != null)
+            sql.append("INSERT INTO " + config.destination.database.dbName + "."  + config.destination.database.schema + "." + config.destination.database.table + " (" + columns.mkString(", ") + ")")
+
         sql.append(" VALUES (")
 
         val values = getValues(config, message.after).mkString(", ")
@@ -25,9 +28,12 @@ object CDCUtil {
 
     def update(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
-        val databaseName = config.destination.schemaProperties.dbName
 
-        sql.append("UPDATE " + databaseName + "." + config.name)
+        if(config.destination.objectStore != null)
+            sql.append("UPDATE " + config.destination.schemaProperties.dbName + "." + config.name)
+        else if(config.destination.database != null)
+            sql.append("UPDATE " + config.destination.database.dbName + "."  + config.destination.database.schema + "." + config.destination.database.table)
+
         sql.append(" SET ")
         val afterColumns = message.after.keys.toList
         val afterValues = getValues(config, message.after)
@@ -49,9 +55,12 @@ object CDCUtil {
 
     def delete(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
-        val databaseName = config.destination.schemaProperties.dbName
 
-        sql.append("DELETE FROM  " + databaseName + "." + config.name)
+        if(config.destination.objectStore != null)
+            sql.append("DELETE FROM  " + config.destination.schemaProperties.dbName + "." + config.name)
+        else if(config.destination.database != null)
+            sql.append("DELETE FROM  " + config.destination.database.dbName + "."  + config.destination.database.schema + "." + config.destination.database.table)
+
         sql.append(" WHERE ")
         val beforeColumns = message.before.keys.toList
         val beforeValues = getValues(config, message.before)

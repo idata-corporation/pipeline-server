@@ -60,9 +60,14 @@ class ScheduledBatchTasks {
 
                     val gson = new Gson
                     messages.asScala.foreach(message => {
+                        val before = System.currentTimeMillis;
+
                         val cdcMessage = gson.fromJson(message.getBody, classOf[CDCMessage])
                         new KafkaMessageProcessor().process(cdcMessage)
                         QueueUtil.deleteMessage(PipelineEnvironment.values.cdcMesssageQueue, message.getReceiptHandle)
+
+                        val totalTime=System.currentTimeMillis-before
+                        logger.info("Milliseconds to process message: " + totalTime.toString)
                     })
                 }
             }
