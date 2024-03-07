@@ -18,10 +18,13 @@ schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"
   checkDatabaseSourceQueries: "30000"
-  checkCDCMessageQueue: "2000"
+  checkCDCMessageQueue: "5000"
 environment: idata-poc
 useApiKeys: "false"
 cdc:
+  kafka:
+    bootstrapServer: b-1.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
+    groupId: idata-group
   debezium:
     kafkaTopic: testdb-topic
 aws:

@@ -20,8 +20,8 @@ class KafkaConsumerRunner() extends Runnable {
     def run(): Unit = {
         try {
             val properties = new Properties()
-            properties.put("bootstrap.servers", "b-1.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092")
-            properties.put("group.id", "idata-group")
+            properties.put("bootstrap.servers", PipelineEnvironment.values.kafkaBootstrapServer)
+            properties.put("group.id", PipelineEnvironment.values.kafkaGroupId)
             properties.put("key.deserializer", classOf[StringDeserializer])
             properties.put("value.deserializer", classOf[StringDeserializer])
 
@@ -29,7 +29,11 @@ class KafkaConsumerRunner() extends Runnable {
             val pattern = Pattern.compile(PipelineEnvironment.values.cdcDebeziumKafkaTopic + ".*")
             consumer.subscribe(pattern)
             while (true) {
-                val records: ConsumerRecords[String, String] = consumer.poll(1000)
+                val records: ConsumerRecords[String, String] = consumer.poll(2000)
+                val logTime: Boolean = records.count() > 0
+                if(logTime)
+                    logger.info("Kafka topic messages received: " + records.count().toString)
+                val before = System.currentTimeMillis;
                 records.asScala.foreach(consumerRecord => {
                     logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", " + consumerRecord.value())
 
@@ -43,6 +47,10 @@ class KafkaConsumerRunner() extends Runnable {
                         QueueUtil.addFifo(PipelineEnvironment.values.cdcMesssageQueue, gson.toJson(message))
                     }
                 })
+                if(logTime) {
+                    val totalTime=System.currentTimeMillis-before
+                    logger.info("Milliseconds to add messages to FIFO queue: " + totalTime.toString)
+                }
             }
         } catch {
             case e: Exception =>

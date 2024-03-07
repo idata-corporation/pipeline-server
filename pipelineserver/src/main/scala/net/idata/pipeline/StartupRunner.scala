@@ -40,6 +40,12 @@ class StartupRunner extends ApplicationRunner {
     @Value("${cdc.debezium.kafkaTopic}")
     var cdcDebeziumKafkaTopic: String = _
 
+    @Value("${cdc.kafka.bootstrapServer}")
+    var cdcKafkaBootstrapServer: String = _
+
+    @Value("${cdc.kafka.groupId}")
+    var cdcKafkaGroupId: String = _
+
     @Value("${aws.region}")
     var region: String = _
 
@@ -99,7 +105,9 @@ class StartupRunner extends ApplicationRunner {
             apiKeysSecretName,
             snowflakeSecretName,
             redshiftSecretName,
-            cdcDebeziumKafkaTopic
+            cdcDebeziumKafkaTopic,
+            cdcKafkaBootstrapServer,
+            cdcKafkaGroupId
         )
 
         PipelineEnvironment.init(pipelineEnvironment)

@@ -42,5 +42,7 @@ case class PipelineEnvironment(
                                   apiKeysSecretName: String,
                                   snowflakeSecretName: String,
                                   redshiftSecretName: String,
-                                  cdcDebeziumKafkaTopic: String
+                                  cdcDebeziumKafkaTopic: String,
+                                  kafkaBootstrapServer: String,
+                                  kafkaGroupId: String
                               )
