@@ -9,7 +9,6 @@ import java.time.Instant
 
 class ObjectStoreCDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(classOf[ObjectStoreCDCUtil])
-    private val messageThreshold = 10
 
     def process(groupOfMessages: List[(String, DatasetConfig, DebeziumMessage)]): Unit = {
         val config = groupOfMessages.head._2
@@ -19,7 +18,7 @@ class ObjectStoreCDCUtil {
             throw new PipelineException("CDC 'deletes' cannot be written to non Apache Iceberg formatted parquet files")
 
         // If the number of messages is less than the threshold or there are deletes, use JDBC to process
-        if (groupOfMessages.length < messageThreshold || containsDeletes.isDefined) {
+        if (groupOfMessages.length < PipelineEnvironment.values.cdcMessageThreshold.objectStore || containsDeletes.isDefined) {
             val sqlList = groupOfMessages.map { case (_, config, message) =>
                 if (message.isInsert)
                     CDCUtil.insertCreateSQL(config, message)

@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-import net.idata.pipeline.common.model.PipelineEnvironment
+import net.idata.pipeline.common.model.{CDCMessageThreshold, PipelineEnvironment}
 import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.controller.CDCConsumerRunner
 import org.slf4j.{Logger, LoggerFactory}
@@ -64,6 +64,15 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.sqs.ttlFileNotifierQueueMessages}")
     var ttlFileNotifierQueueMessages: Int = _
 
+    @Value("${cdc.messageThreshold.objectStore}")
+    var cdcThresholdObjectStore: Int = _
+
+    @Value("${cdc.messageThreshold.redshift}")
+    var cdcThresholdRedshift: Int = _
+
+    @Value("${cdc.messageThreshold.snowflake}")
+    var cdcThresholdSnowflake: Int = _
+
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
@@ -89,6 +98,11 @@ class StartupRunner extends ApplicationRunner {
                 null
         }
 
+        val cdcMessageThreshold = CDCMessageThreshold(
+            cdcThresholdObjectStore,
+            cdcThresholdRedshift,
+            cdcThresholdSnowflake)
+
         val pipelineEnvironment = PipelineEnvironment(
             environment,
             region,
@@ -107,7 +121,8 @@ class StartupRunner extends ApplicationRunner {
             redshiftSecretName,
             cdcDebeziumKafkaTopic,
             cdcKafkaBootstrapServer,
-            cdcKafkaGroupId
+            cdcKafkaGroupId,
+            cdcMessageThreshold
         )
 
         PipelineEnvironment.init(pipelineEnvironment)

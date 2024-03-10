@@ -18,7 +18,7 @@ schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"
   checkDatabaseSourceQueries: "30000"
-  checkCDCMessageQueue: "5000"
+  checkCDCMessageQueue: "10000"
 environment: idata-poc
 useApiKeys: "false"
 cdc:

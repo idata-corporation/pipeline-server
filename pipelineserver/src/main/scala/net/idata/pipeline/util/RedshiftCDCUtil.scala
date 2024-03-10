@@ -1,6 +1,6 @@
 package net.idata.pipeline.util
 
-import net.idata.pipeline.common.model.DatasetConfig
+import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
 import net.idata.pipeline.model.DebeziumMessage
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -9,13 +9,12 @@ import java.util.Properties
 
 class RedshiftCDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(classOf[RedshiftCDCUtil])
-    private val messageThreshold = 30
 
     def process(groupOfMessages: List[(String, DatasetConfig, DebeziumMessage)]): Unit = {
         val containsDeletes = groupOfMessages.find(_._3.isDelete == true)
 
         // If the number of messages is less than the threshold or there are deletes, use JDBC to process
-        if (groupOfMessages.length < messageThreshold || containsDeletes.isDefined) {
+        if (groupOfMessages.length < PipelineEnvironment.values.cdcMessageThreshold.redshift || containsDeletes.isDefined) {
             val sql = groupOfMessages.map { case (_, config, message) =>
                 if (message.isInsert)
                     CDCUtil.insertCreateSQL(config, message)

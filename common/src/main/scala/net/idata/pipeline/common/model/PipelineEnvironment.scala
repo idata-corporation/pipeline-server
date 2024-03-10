@@ -44,5 +44,6 @@ case class PipelineEnvironment(
                                   redshiftSecretName: String,
                                   cdcDebeziumKafkaTopic: String,
                                   kafkaBootstrapServer: String,
-                                  kafkaGroupId: String
+                                  kafkaGroupId: String,
+                                  cdcMessageThreshold: CDCMessageThreshold
                               )
