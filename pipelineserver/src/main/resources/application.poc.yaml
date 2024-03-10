@@ -27,6 +27,10 @@ cdc:
     groupId: idata-group
   debezium:
     kafkaTopic: testdb-topic
+  messageThreshold:
+    objectStore: 10
+    redshift: 30
+    snowflake: 30
 aws:
   region: us-east-1
   secretsManager:

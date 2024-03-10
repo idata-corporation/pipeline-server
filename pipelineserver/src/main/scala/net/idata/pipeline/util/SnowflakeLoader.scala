@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.{Notification, PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.aws.SecretsManagerUtil
 import net.idata.pipeline.common.util.{GuidV5, NotificationUtil, ObjectStoreUtil}
 import net.idata.pipeline.model._
 import net.snowflake.client.core.QueryStatus
@@ -44,7 +43,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         Class.forName("net.snowflake.client.jdbc.SnowflakeDriver")
 
         // Get the secrets
-        val secrets = retrieveSecrets()
+        val secrets = SecretsUtil.snowflakeSecrets()
 
         var conn: Connection = null
         var statement: Statement = null
@@ -74,40 +73,6 @@ class SnowflakeLoader(jobContext: JobContext) {
             if (conn != null)
                 conn.close()
         }
-    }
-
-    private def retrieveSecrets(): SnowflakeSecrets = {
-        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.snowflakeSecretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.snowflakeSecretName))
-        val username = dbSecret.get("username")
-        if(username == null)
-            throw new PipelineException("Could not retrieve the Snowflake username from Secrets Manager")
-        val password = dbSecret.get("password")
-        if(password == null)
-            throw new PipelineException("Could not retrieve the Snowflake password from Secrets Manager")
-        val jdbcUrl = dbSecret.get("jdbcUrl")
-        if(jdbcUrl == null)
-            throw new PipelineException("Could not retrieve the Snowflake jdbcUrl from Secrets Manager")
-        val stageName = dbSecret.get("stageName")
-        if(stageName == null)
-            throw new PipelineException("Could not retrieve the Snowflake stageName from Secrets Manager")
-        val stageUrl = {
-            val url = dbSecret.get("stageUrl")
-            if(url == null)
-                throw new PipelineException("Could not retrieve the Snowflake stageUrl from Secrets Manager")
-            if(url.endsWith("/"))
-                url
-            else
-                url + "/"
-        }
-
-        SnowflakeSecrets(
-            username,
-            password,
-            jdbcUrl,
-            stageName,
-            stageUrl
-        )
     }
 
     private def prepareStagingFile(baseStageUrl: String): String = {
@@ -354,7 +319,7 @@ class SnowflakeLoader(jobContext: JobContext) {
                 null
         }
         catch {
-            case e: Exception => null
+            case _: Exception => null
         }
     }
 

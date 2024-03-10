@@ -1,15 +1,18 @@
 package net.idata.pipeline.util
 
-import net.idata.pipeline.common.model.DatasetConfig
+import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
+import net.idata.pipeline.common.util.ObjectStoreUtil
 import net.idata.pipeline.model.DebeziumMessage
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import scala.collection.JavaConverters._
 
-object GenerateSQLUtil {
+object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-    def insert(config: DatasetConfig, message: DebeziumMessage): String = {
+    def insertCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
         val columns = message.after.keys.toList
 
@@ -26,7 +29,7 @@ object GenerateSQLUtil {
         sql.toString
     }
 
-    def update(config: DatasetConfig, message: DebeziumMessage): String = {
+    def updateCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -53,7 +56,7 @@ object GenerateSQLUtil {
         sql.toString
     }
 
-    def delete(config: DatasetConfig, message: DebeziumMessage): String = {
+    def deleteCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -70,6 +73,45 @@ object GenerateSQLUtil {
         sql.append(beforeValuesWithQuotes)
 
         sql.toString
+    }
+
+    def createFile(config: DatasetConfig, messages: List[DebeziumMessage]): Unit = {
+        val content = createFileInMemory(config, messages)
+
+        // Determine the raw filename
+        val rawFilename = {
+            val dateFormat = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss-SSS")
+            val date = dateFormat.format(new Date())
+            config.name + "." + date + "." + System.currentTimeMillis().toString + ".dataset.csv"
+        }
+        // Write the data to the raw bucket
+        val path = "s3://" + PipelineEnvironment.values.environment + "-raw/temp/" + config.name + "/" + rawFilename
+        logger.info("Creating file in the raw bucket: " + path)
+        ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(path), ObjectStoreUtil.getKey(path), content)
+    }
+
+    private def createFileInMemory(config: DatasetConfig, messages: List[DebeziumMessage]): String = {
+        val delimiter = {
+            if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes != null)
+                config.source.fileAttributes.csvAttributes.delimiter
+            else
+                ","
+        }
+        val header = {
+            if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes != null && config.source.fileAttributes.csvAttributes.header)
+                messages.head.after.keys.mkString(delimiter)
+            else
+                null
+        }
+
+        val body = messages.map(message => {
+            message.after.values.mkString(delimiter)
+        }).mkString("\n")
+
+        if(header != null)
+            header + "\n" + body
+        else
+            body
     }
 
     private def getValues(config: DatasetConfig, valueMap: Map[String, String]): List[String] = {

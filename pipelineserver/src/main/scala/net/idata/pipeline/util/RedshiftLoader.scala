@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.{Notification, PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.aws.SecretsManagerUtil
 import net.idata.pipeline.common.util.{GuidV5, NotificationUtil}
 import net.idata.pipeline.model._
 import org.slf4j.{Logger, LoggerFactory}
@@ -40,7 +39,7 @@ class RedshiftLoader(jobContext: JobContext) {
 
         statusUtil.info("begin", "Loading the data into Redshift database: " + config.destination.database.dbName + ", table: " + config.destination.database.table)
 
-        val secrets = retrieveSecrets()
+        val secrets = SecretsUtil.redshiftSecrets()
 
         Class.forName("com.amazon.redshift.jdbc42.Driver")
         statusUtil.info("processing", "Redshift driver loaded successfully")
@@ -80,7 +79,7 @@ class RedshiftLoader(jobContext: JobContext) {
     }
 
     def executeSQL(sql: String): Unit = {
-        val secrets = retrieveSecrets()
+        val secrets = SecretsUtil.redshiftSecrets()
 
         Class.forName("com.amazon.redshift.jdbc42.Driver")
 
@@ -103,31 +102,6 @@ class RedshiftLoader(jobContext: JobContext) {
             if (conn != null)
                 conn.close()
         }
-    }
-
-    private def retrieveSecrets(): RedshiftSecrets = {
-        val secretName = PipelineEnvironment.values.redshiftSecretName
-        val dbSecret = SecretsManagerUtil.getSecretMap(secretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager secret: " + secretName))
-        val username = dbSecret.get("username")
-        if (username == null)
-            throw new PipelineException("Could not retrieve the Redshift username from Secrets Manager secret: " + secretName)
-        val password = dbSecret.get("password")
-        if (password == null)
-            throw new PipelineException("Could not retrieve the Redshift password from Secrets Manager secret: " + secretName)
-        val jdbcUrl = dbSecret.get("jdbcUrl")
-        if (jdbcUrl == null)
-            throw new PipelineException("Could not retrieve the Redshift jdbcUrl from Secrets Manager secret: " + secretName)
-        val dbRole = dbSecret.get("dbRole")
-        if (dbRole == null)
-            throw new PipelineException("Could not retrieve the Redshift dbRole from Secrets Manager secret: " + secretName)
-
-        RedshiftSecrets(
-            username,
-            password,
-            jdbcUrl,
-            dbRole,
-        )
     }
 
     private def prepareStagingFile(): String = {

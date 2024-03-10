@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.PipelineEnvironment
 import net.idata.pipeline.common.util.NotificationUtil
-import net.idata.pipeline.controller.KafkaConsumerRunner
+import net.idata.pipeline.controller.CDCConsumerRunner
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
@@ -114,7 +114,7 @@ class StartupRunner extends ApplicationRunner {
     }
 
     private def initKafkaConsumer(): Unit = {
-        val thread = new Thread(new KafkaConsumerRunner())
+        val thread = new Thread(new CDCConsumerRunner())
         thread.start()
     }
 }
