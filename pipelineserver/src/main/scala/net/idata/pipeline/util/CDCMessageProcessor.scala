@@ -1,13 +1,15 @@
 package net.idata.pipeline.util
 
 import com.google.common.base.Throwables
-import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.DatasetConfigIO
+import com.google.gson.Gson
+import net.idata.pipeline.common.model.{DatasetConfig, Notification, PipelineEnvironment, PipelineException}
+import net.idata.pipeline.common.util.{DatasetConfigIO, NotificationUtil, QueueUtil}
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import scala.collection.JavaConverters._
 
 class CDCMessageProcessor {
     private val logger: Logger = LoggerFactory.getLogger(classOf[CDCMessageProcessor])
@@ -32,7 +34,7 @@ class CDCMessageProcessor {
                 beforeNV.split(",").map(_.split("=")).map(a=>(a(0), a(1))).toMap
             else
                 null
-        }
+        }.asJava
 
         val after = {
             val afterNV = parseSubstring(message, "after=Struct{")
@@ -40,13 +42,26 @@ class CDCMessageProcessor {
                 afterNV.split(",").map(_.split("=")).map(a=>(a(0), a(1))).toMap
             else
                 null
-        }
+        }.asJava
 
         val isInsert = before == null && after != null
         val isUpdate = before != null && after != null
         val isDelete = before != null && after == null
 
-        DebeziumMessage(topic, datasetName, isInsert, isUpdate, isDelete, before, after)
+        val debeziumMessage = DebeziumMessage(topic, datasetName, isInsert, isUpdate, isDelete, before, after)
+        if(PipelineEnvironment.values.cdcTopicArn != null)
+            writeToCDCTopic(debeziumMessage)
+        debeziumMessage
+    }
+
+    private def writeToCDCTopic(debeziumMessage: DebeziumMessage): Unit = {
+        // Create the message attributes for the SNS filter policy
+        val attributes = new java.util.HashMap[String, String]
+        attributes.put("dataset", debeziumMessage.datasetName)
+        attributes.put("cdcTopic", debeziumMessage.topic)
+
+        val gson = new Gson
+        NotificationUtil.addFifo(PipelineEnvironment.values.cdcTopicArn, gson.toJson(debeziumMessage), attributes.asScala.toMap)
     }
 
     private def parseSubstring(initialValue: String, searchFor: String): String = {

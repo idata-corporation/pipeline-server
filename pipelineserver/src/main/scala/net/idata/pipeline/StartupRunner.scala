@@ -26,6 +26,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
 import org.springframework.stereotype.Component
+import scala.collection.JavaConverters._
 
 @Component
 class StartupRunner extends ApplicationRunner {
@@ -58,8 +59,11 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.secretsManager.redshiftSecretName}")
     var redshiftSecretName: String = _
 
-    @Value("${aws.sns.sendNotifications}")
-    var snsSendNotifications: Boolean = _
+    @Value("${aws.sns.sendDatasetNotifications}")
+    var snsSendDatasetNotifications: Boolean = _
+
+    @Value("${aws.sns.sendCDCNotifications}")
+    var snsSendCDCNotifications: Boolean = _
 
     @Value("${aws.sqs.ttlFileNotifierQueueMessages}")
     var ttlFileNotifierQueueMessages: Int = _
@@ -90,10 +94,17 @@ class StartupRunner extends ApplicationRunner {
         val fileNotifierMessageTableName = environment + "-file-notifier-message"
         val datasetPullTableName = environment + "-data-pull"
 
-        // Send SNS notifications?
-        val notifyTopicArn = {
-            if(snsSendNotifications)
+        // Send SNS dataset notifications?
+        val datasetTopicArn = {
+            if(snsSendDatasetNotifications)
                 NotificationUtil.getTopicArn(environment + "-dataset-notification")
+            else
+                null
+        }
+
+        val cdcTopicArn = {
+            if(snsSendCDCNotifications)
+                NotificationUtil.getTopicArn(environment + "-cdc-notification.fifo")
             else
                 null
         }
@@ -109,7 +120,8 @@ class StartupRunner extends ApplicationRunner {
             fileNotifierQueue,
             ttlFileNotifierQueueMessages,
             cdcMessageQueue,
-            notifyTopicArn,
+            datasetTopicArn,
+            cdcTopicArn,
             datasetTableName,
             archivedMetadataTableName,
             datasetStatusTableName,

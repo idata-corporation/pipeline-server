@@ -38,6 +38,7 @@ aws:
     snowflakeSecretName: idata-poc-snowflakesecrets
     redshiftSecretName: idata-redshift-secrets-smartx-test
   sns:
-    sendNotifications: "true"
+    sendDatasetNotifications: "true"
+    sendCDCNotifications: "true"
   sqs:
     ttlFileNotifierQueueMessages: "60"

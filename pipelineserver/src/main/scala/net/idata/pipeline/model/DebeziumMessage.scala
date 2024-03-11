@@ -6,6 +6,6 @@ case class DebeziumMessage(
                               isInsert: Boolean,
                               isUpdate: Boolean,
                               isDelete: Boolean,
-                              before: Map[String, String],
-                              after: Map[String, String],
+                              before: java.util.Map[String, String],
+                              after: java.util.Map[String, String],
                           )

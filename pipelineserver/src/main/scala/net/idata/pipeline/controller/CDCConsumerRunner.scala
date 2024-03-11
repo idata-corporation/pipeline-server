@@ -50,7 +50,8 @@ class CDCConsumerRunner extends Runnable {
                 if(messagesReceived) {
                     // Add the message list to the queue
                     val gson = new Gson()
-                    QueueUtil.addFifo(PipelineEnvironment.values.cdcMesssageQueue, gson.toJson(messageList.asJava))
+                    val json = gson.toJson(messageList.asJava)
+                    QueueUtil.addFifo(PipelineEnvironment.values.cdcMesssageQueue, json)
                     messageList.clear()
                     val totalTime=System.currentTimeMillis-before
                     logger.info("Milliseconds to add messages to FIFO queue: " + totalTime.toString)
