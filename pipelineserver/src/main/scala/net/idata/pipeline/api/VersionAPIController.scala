@@ -20,8 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import com.google.gson.Gson
-//import net.idata.pipeline.build.sbt.BuildInfo
-import net.idata.pipeline.util.APIKeyValidator
+import net.idata.pipeline.util.{APIKeyValidator, BuildInfoUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.http.{HttpStatus, MediaType, ResponseEntity}
 import org.springframework.web.bind.annotation._
@@ -38,8 +37,7 @@ class VersionAPIController {
         try {
             logger.info("API endpoint GET /version called")
             APIKeyValidator.validate(apiKey)
-            //val map = Map("version" -> BuildInfo.version).asJava
-            val map = Map("version" ->"2.2.5").asJava
+            val map = Map("version" -> BuildInfoUtil.version).asJava
             val gson = new Gson
             new ResponseEntity[String](gson.toJson(map), HttpStatus.OK)
         }

@@ -45,5 +45,6 @@ case class PipelineEnvironment(
                                   cdcDebeziumKafkaTopic: String,
                                   kafkaBootstrapServer: String,
                                   kafkaGroupId: String,
-                                  cdcMessageThreshold: CDCMessageThreshold
+                                  cdcMessageThreshold: CDCMessageThreshold,
+                                  sparkProperties: SparkProperties
                               )

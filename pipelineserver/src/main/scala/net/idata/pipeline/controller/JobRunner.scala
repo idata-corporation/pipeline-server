@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import net.idata.pipeline.common.model.PipelineException
-import net.idata.pipeline.model.JobContext
+import net.idata.pipeline.model.{GlobalJobContext, JobContext}
 import net.idata.pipeline.util._
 
 class JobRunner(jobContext: JobContext) extends Runnable {
@@ -44,8 +44,17 @@ class JobRunner(jobContext: JobContext) extends Runnable {
                     jobContext
             }
 
-            if(config.destination.objectStore != null)
-                new ObjectStoreLoader(jobContextTransform).process()
+            if(config.destination.objectStore != null) {
+                // Default to Athena, unless useSparkCluster is set
+                val useSparkCluster = config.destination.objectStore.useSparkCluster
+
+                if(useSparkCluster) {
+                    val jobId = new SparkController().startJob(jobContext: JobContext)
+                    GlobalJobContext.replaceJobContext(jobContext.copy(sparkJobId = jobId))
+                }
+                else
+                    new ObjectStoreLoader(jobContextTransform).process()
+            }
 
             if(config.destination.database != null) {
                 if(config.destination.database.snowflake != null)

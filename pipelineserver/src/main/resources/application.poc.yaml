@@ -41,3 +41,15 @@ aws:
     sendNotifications: "true"
   sqs:
     ttlFileNotifierQueueMessages: "60"
+  elasticMapReduce:
+    emr:
+      enabled: "false"
+      masterNodeIp: "na"
+    eksemr:
+      enabled: "true"
+      virtualClusterId: lf39nq0exg831vqoc7tz7894g
+      executionRoleArn: arn:aws:iam::116279234263:role/EMRContainers-JobExecutionRole
+      releaseLabel: emr-6.3.0-latest
+      configurationFileUrl: s3://idata-poc-config/spark/emr-config.json
+      cloudwatchLogGroupName: /eks-emr-logs/poc
+      logUri: s3://idata-poc-temp/

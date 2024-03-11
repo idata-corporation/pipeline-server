@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.common.model.{DatasetConfig, DatasetMetadata}
+import net.idata.pipeline.common.model.{DatasetConfig, DatasetMetadata, DatasetProperties}
 import net.idata.pipeline.common.util.StatusUtil
 
 case class JobContext(
@@ -28,6 +28,8 @@ case class JobContext(
                          config: DatasetConfig,
                          state: JobState,
                          thread: Thread,
-                         statusUtil: StatusUtil
+                         statusUtil: StatusUtil,
+                         datasetProperties: DatasetProperties,
+                         sparkJobId: String
                      )
 
