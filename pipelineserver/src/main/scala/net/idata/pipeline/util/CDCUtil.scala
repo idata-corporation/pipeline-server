@@ -14,7 +14,7 @@ object CDCUtil {
 
     def insertCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
         val sql = new StringBuilder()
-        val columns = message.after.keys.toList
+        val columns = message.after.asScala.keys.toList
 
         if(config.destination.objectStore != null)
             sql.append("INSERT INTO " + config.destination.schemaProperties.dbName + "." + config.name + " (" + columns.mkString(", ") + ")")
@@ -23,7 +23,7 @@ object CDCUtil {
 
         sql.append(" VALUES (")
 
-        val values = getValues(config, message.after).mkString(", ")
+        val values = getValues(config, message.after.asScala.toMap).mkString(", ")
         sql.append(values + ")")
 
         sql.toString
@@ -38,16 +38,16 @@ object CDCUtil {
             sql.append("UPDATE " + config.destination.database.dbName + "."  + config.destination.database.schema + "." + config.destination.database.table)
 
         sql.append(" SET ")
-        val afterColumns = message.after.keys.toList
-        val afterValues = getValues(config, message.after)
+        val afterColumns = message.after.asScala.keys.toList
+        val afterValues = getValues(config, message.after.asScala.toMap)
         val afterValuesWithQuotes = (afterColumns zip afterValues).map{ case (column, value) =>
             column + " = " + value
         }.mkString(", ")
         sql.append(afterValuesWithQuotes)
 
         sql.append(" WHERE ")
-        val beforeColumns = message.before.keys.toList
-        val beforeValues = getValues(config, message.before)
+        val beforeColumns = message.before.asScala.keys.toList
+        val beforeValues = getValues(config, message.before.asScala.toMap)
         val beforeValuesWithQuotes = (beforeColumns zip beforeValues).map{ case (column, value) =>
             column + " = " + value
         }.mkString(" AND ")
@@ -65,8 +65,8 @@ object CDCUtil {
             sql.append("DELETE FROM  " + config.destination.database.dbName + "."  + config.destination.database.schema + "." + config.destination.database.table)
 
         sql.append(" WHERE ")
-        val beforeColumns = message.before.keys.toList
-        val beforeValues = getValues(config, message.before)
+        val beforeColumns = message.before.asScala.keys.toList
+        val beforeValues = getValues(config, message.before.asScala.toMap)
         val beforeValuesWithQuotes = (beforeColumns zip beforeValues).map{ case (column, value) =>
             column + " = " + value
         }.mkString(" AND ")
@@ -99,13 +99,13 @@ object CDCUtil {
         }
         val header = {
             if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes != null && config.source.fileAttributes.csvAttributes.header)
-                messages.head.after.keys.mkString(delimiter)
+                messages.head.after.asScala.keys.mkString(delimiter)
             else
                 null
         }
 
         val body = messages.map(message => {
-            message.after.values.mkString(delimiter)
+            message.after.asScala.values.mkString(delimiter)
         }).mkString("\n")
 
         if(header != null)

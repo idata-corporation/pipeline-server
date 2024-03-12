@@ -38,7 +38,7 @@ class SubscriptionAPIController {
             logger.info("API endpoint GET /subscriptions called")
             APIKeyValidator.validate(apiKey)
 
-            val subscriptions = NotificationUtil.getSubscribers(PipelineEnvironment.values.notifyTopicArn)
+            val subscriptions = NotificationUtil.getSubscribers(PipelineEnvironment.values.datasetTopicArn)
             val gson = new Gson()
             val json = gson.toJson(subscriptions)
 
@@ -63,7 +63,7 @@ class SubscriptionAPIController {
             if(subscription.protocol == null)
                 throw new PipelineException("'protocol' is a required value")
 
-            val subscriptionWithTopicArn = subscription.copy(topicArn = PipelineEnvironment.values.notifyTopicArn)
+            val subscriptionWithTopicArn = subscription.copy(topicArn = PipelineEnvironment.values.datasetTopicArn)
             val s = NotificationUtil.addSubscription(subscriptionWithTopicArn)
             val gson = new Gson
             val json = gson.toJson(s)

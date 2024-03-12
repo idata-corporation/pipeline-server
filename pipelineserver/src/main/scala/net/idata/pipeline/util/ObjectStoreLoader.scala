@@ -230,7 +230,7 @@ class ObjectStoreLoader(jobContext: JobContext) {
         attributes.put("prefixKey", config.destination.objectStore.prefixKey)
         attributes.put("destination", "objectStore")
 
-        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
+        NotificationUtil.add(PipelineEnvironment.values.datasetTopicArn, jsonNotification, attributes.asScala.toMap)
         statusUtil.info("processing", "notification sent: " + jsonNotification)
     }
 }

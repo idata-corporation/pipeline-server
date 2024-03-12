@@ -253,7 +253,7 @@ class RedshiftLoader(jobContext: JobContext) {
         attributes.put("database", config.destination.database.dbName)
         attributes.put("table", config.destination.database.table)
 
-        NotificationUtil.add(PipelineEnvironment.values.notifyTopicArn, jsonNotification, attributes.asScala.toMap)
+        NotificationUtil.add(PipelineEnvironment.values.datasetTopicArn, jsonNotification, attributes.asScala.toMap)
         statusUtil.info("processing", "notification sent: " + jsonNotification)
     }
 }

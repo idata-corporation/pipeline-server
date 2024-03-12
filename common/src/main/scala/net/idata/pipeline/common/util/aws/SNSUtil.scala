@@ -51,6 +51,27 @@ class SNSUtil(val sns: AmazonSNS) extends NotificationUtility {
         sns.publish(publishRequest)
     }
 
+    override def addFifo(topicArn: String, json: String, filter: Map[String, String]): PublishResult = {
+        val messageAttributeMap = filter.map { case (name, value) =>
+            val messageAttribute = {
+                if(value.contains(","))
+                    new MessageAttributeValue().withDataType("String.Array").withStringValue(value)
+                else
+                    new MessageAttributeValue().withDataType("String").withStringValue(value)
+            }
+            (name, messageAttribute)
+        }.asJava
+
+        val messageGroupId: String = "pipeline-message-group"  // The pipeline does not require individual message groups
+        val publishRequest = new PublishRequest()
+            .withMessageGroupId(messageGroupId)
+            .withTopicArn(topicArn)
+            .withMessage(json)
+            .withMessageAttributes(messageAttributeMap)
+
+        sns.publish(publishRequest)
+    }
+
     def addSubscription(subscription: Subscription): Subscription = {
         val subscribeRequest = {
             val attributes = mutable.Map[String, String]()
