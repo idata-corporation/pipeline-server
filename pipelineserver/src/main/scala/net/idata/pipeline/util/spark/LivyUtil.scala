@@ -1,7 +1,27 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.util.spark
+
+/*
+IData Pipeline
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.PipelineEnvironment
+import net.idata.pipeline.model.spark.{EMRSparkExecutorResult, EMRSparkJobStatus, LivyPayload, SparkJobStatus}
+import net.idata.pipeline.util.HttpUtil
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
@@ -10,7 +30,7 @@ object LivyUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
     def executeSparkJob(file: String, className: String, pyFiles: String, conf: String, jars: String, base64EncodedArguments: String, jobName: String, fileSize: Long): String = {
-        val url = "http://" + PipelineEnvironment.values.sparkProperties.emrProperties.emrMasterNodeIp + ":8998" + "/batches"
+        val url = "http://" + PipelineEnvironment.values.sparkProperties.emrProperties.masterNodeIp + ":8998" + "/batches"
 
         // Base64 encoded arguments are required because of a bug in YARN with 2 brackets }} - https://issues.apache.org/jira/browse/SPARK-17814
         val arguments = Array(base64EncodedArguments)
@@ -26,29 +46,10 @@ object LivyUtil {
             parameters.append("--jars " + jars + " ")
         logger.info("Running spark job: " + jobName + " with the following parameters: --file " + file + " " + parameters.mkString)
 
-        val (sparkDriverMemory, sparkExecutorMemory, sparkNumExecutors, sparkExecutorCores) = {
-            if(fileSize <= PipelineEnvironment.values.sparkProperties.emrProperties.smallSparkMemoryCores.maxFileSize) {
-                logger.info("Using the small spark memory cores")
-                (PipelineEnvironment.values.sparkProperties.emrProperties.smallSparkMemoryCores.sparkDriverMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.smallSparkMemoryCores.sparkExecutorMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.smallSparkMemoryCores.sparkNumExecutors,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.smallSparkMemoryCores.sparkExecutorCores)
-            }
-            else if(fileSize <= PipelineEnvironment.values.sparkProperties.emrProperties.mediumSparkMemoryCores.maxFileSize) {
-                logger.info("Using the medium spark memory cores")
-                (PipelineEnvironment.values.sparkProperties.emrProperties.mediumSparkMemoryCores.sparkDriverMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.mediumSparkMemoryCores.sparkExecutorMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.mediumSparkMemoryCores.sparkNumExecutors,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.mediumSparkMemoryCores.sparkExecutorCores)
-            }
-            else {
-                logger.info("Using the large spark memory cores")
-                (PipelineEnvironment.values.sparkProperties.emrProperties.largeSparkMemoryCores.sparkDriverMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.largeSparkMemoryCores.sparkExecutorMemory,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.largeSparkMemoryCores.sparkNumExecutors,
-                    PipelineEnvironment.values.sparkProperties.emrProperties.largeSparkMemoryCores.sparkExecutorCores)
-            }
-        }
+        val driverMemory = PipelineEnvironment.values.sparkProperties.jobConfiguration.driverMemory
+        val executorMemory = PipelineEnvironment.values.sparkProperties.jobConfiguration.executorMemory
+        val numExecutors = PipelineEnvironment.values.sparkProperties.jobConfiguration.numExecutors
+        val executorCores = PipelineEnvironment.values.sparkProperties.jobConfiguration.executorCores
 
         val myJars = {
             if(jars != null)
@@ -77,10 +78,10 @@ object LivyUtil {
             myJars,
             myConf,
             myPyFiles,
-            sparkDriverMemory,
-            sparkExecutorMemory,
-            sparkExecutorCores.toInt,
-            sparkNumExecutors.toInt)
+            driverMemory,
+            executorMemory,
+            executorCores,
+            numExecutors)
 
         val gson = new Gson
         val jsonToPost = gson.toJson(payload)
@@ -90,7 +91,7 @@ object LivyUtil {
     }
 
     def getSparkJobStatus(jobId: String): Long = {
-        val masterNodeIP = PipelineEnvironment.values.sparkProperties.emrProperties.emrMasterNodeIp
+        val masterNodeIP = PipelineEnvironment.values.sparkProperties.emrProperties.masterNodeIp
         val url = "http://" + masterNodeIP + ":8998" + "/batches/" + jobId
         val response = HttpUtil.get(url, bearerToken = null, 15000, retry = true, retryWaitMillis = 60000)
 

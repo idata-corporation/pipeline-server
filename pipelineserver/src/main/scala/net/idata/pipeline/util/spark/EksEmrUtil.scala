@@ -1,11 +1,29 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.util.spark
+
+/*
+IData Pipeline
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 import com.amazonaws.services.emrcontainers.AmazonEMRContainersClientBuilder
 import com.amazonaws.services.emrcontainers.model._
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.ObjectStoreUtil
-import net.idata.pipeline.model.SparkJobStatus
+import net.idata.pipeline.model.spark.SparkJobStatus
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
@@ -31,30 +49,12 @@ object EksEmrUtil {
                     parameters.append("--jars " + jars + " ")
                 logger.info("Running spark job: " + jobName + " with the following parameters: --file " + file + " " + parameters.mkString)
 
-                val (sparkDriverMemory, sparkExecutorMemory, sparkNumExecutors, sparkExecutorCores) = {
-                    if(fileSize <= PipelineEnvironment.values.sparkProperties.eksEmrProperties.smallSparkMemoryCores.maxFileSize) {
-                        logger.info("Using the small spark memory cores")
-                        (PipelineEnvironment.values.sparkProperties.eksEmrProperties.smallSparkMemoryCores.sparkDriverMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.smallSparkMemoryCores.sparkExecutorMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.smallSparkMemoryCores.sparkNumExecutors,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.smallSparkMemoryCores.sparkExecutorCores)
-                    }
-                    else if(fileSize <= PipelineEnvironment.values.sparkProperties.eksEmrProperties.mediumSparkMemoryCores.maxFileSize) {
-                        logger.info("Using the medium spark memory cores")
-                        (PipelineEnvironment.values.sparkProperties.eksEmrProperties.mediumSparkMemoryCores.sparkDriverMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.mediumSparkMemoryCores.sparkExecutorMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.mediumSparkMemoryCores.sparkNumExecutors,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.mediumSparkMemoryCores.sparkExecutorCores)
-                    }
-                    else {
-                        logger.info("Using the large spark memory cores")
-                        (PipelineEnvironment.values.sparkProperties.eksEmrProperties.largeSparkMemoryCores.sparkDriverMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.largeSparkMemoryCores.sparkExecutorMemory,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.largeSparkMemoryCores.sparkNumExecutors,
-                            PipelineEnvironment.values.sparkProperties.eksEmrProperties.largeSparkMemoryCores.sparkExecutorCores)
-                    }
-                }
-                parameters.append("--conf spark.driver.memory=" + sparkDriverMemory + " --conf spark.executor.memory=" + sparkExecutorMemory + " --conf spark.executor.instances=" + sparkNumExecutors + " --conf spark.executor.cores=" + sparkExecutorCores + " ")
+                val driverMemory = PipelineEnvironment.values.sparkProperties.jobConfiguration.driverMemory
+                val executorMemory = PipelineEnvironment.values.sparkProperties.jobConfiguration.executorMemory
+                val numExecutors = PipelineEnvironment.values.sparkProperties.jobConfiguration.numExecutors
+                val executorCores = PipelineEnvironment.values.sparkProperties.jobConfiguration.executorCores
+
+                parameters.append("--conf spark.driver.memory=" + driverMemory + " --conf spark.executor.memory=" + executorMemory + " --conf spark.executor.instances=" + numExecutors + " --conf spark.executor.cores=" + executorCores + " ")
                 parameters.mkString
             }
 

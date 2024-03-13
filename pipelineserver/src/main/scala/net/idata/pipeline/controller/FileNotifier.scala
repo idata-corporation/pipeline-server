@@ -20,14 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import com.google.gson.Gson
-import net.idata.pipeline.common.model.{BuildInfo, _}
-import net.idata.pipeline.common.util.{DatasetConfigUtil, _}
+import net.idata.pipeline.common.model.spark.SparkRuntime
+import net.idata.pipeline.common.model._
+import net.idata.pipeline.common.util._
 import net.idata.pipeline.model.{INITIALIZED, JobContext}
 import net.idata.pipeline.util.{DataUtil, DatasetMetadataUtil}
-import org.apache.commons.compress.utils.FileNameUtils
 import org.slf4j.{Logger, LoggerFactory}
-
-import java.time.Instant
 
 class FileNotifier {
     private val logger: Logger = LoggerFactory.getLogger(classOf[FileNotifier])
@@ -57,15 +55,33 @@ class FileNotifier {
             if(config == null)
                 throw new PipelineException("Dataset: " + metadata.dataset + " is not configured in the NoSQL database")
 
-            // Read the data into memory
-            val data = DataUtil.read(bucket, key, config, metadata, statusUtil)
-            statusUtil.info("processing", "Total file size: " + data.size.toString)
+            // Read the data into memory, if necessary
+            val data = {
+                // If we're transforming to parquet (object store) using a spark cluster and there is no data quality, transformation,
+                // or database load, don't load the data. The spark job will read and transform the data
+                if(config.destination.objectStore != null &&
+                    config.destination.objectStore.useSparkCluster &&
+                    config.dataQuality == null &&
+                    config.transformation == null &&
+                    config.destination.database == null)
+                {
+                    null
+                }
+                else
+                    DataUtil.read(bucket, key, config, metadata, statusUtil)
+            }
+            if(data != null)
+                statusUtil.info("processing", "Total file size: " + data.size.toString)
 
-            val datasetProperties = getDatasetProperties(bucket, key, pipelineToken, metadata.publisherToken, metadata, config)
+            val sparkRuntime = {
+                if(config.destination.objectStore != null && config.destination.objectStore.useSparkCluster)
+                    getSparkRuntime(bucket, key, pipelineToken, metadata.publisherToken, metadata, config)
+                else
+                    null
+            }
 
             statusUtil.info("end", "Process completed successfully")
-
-            JobContext(pipelineToken, metadata, data, config, INITIALIZED, null, statusUtil)
+            JobContext(pipelineToken, metadata, data, config, INITIALIZED, null, statusUtil, sparkRuntime, null)
         } catch {
             case e: Exception =>
                 statusUtil.error("end", "Process completed, error: " + Throwables.getStackTraceAsString(e))
@@ -73,7 +89,7 @@ class FileNotifier {
         }
     }
 
-    private def getDatasetProperties(bucket: String, key: String, pipelineToken: String, publisherToken: String, metadata: DatasetMetadata, config: DatasetConfig): DatasetProperties = {
+    private def getSparkRuntime(bucket: String, key: String, pipelineToken: String, publisherToken: String, metadata: DatasetMetadata, config: DatasetConfig): SparkRuntime = {
         val environment = PipelineEnvironment.values.environment
 
         val sourceTransformUrl = {
@@ -95,17 +111,14 @@ class FileNotifier {
                 "s3://" + environment + "-" + "-raw-plus" + "/" + config.destination.objectStore.prefixKey + "/" + config.name + "/parquet"
         }
 
-        val (transformFile, transformClassName) = BuildInfo.getTransformInfo(environment)
-
-        DatasetProperties(
+        spark.SparkRuntime(
             config.name,
             publisherToken,
             pipelineToken,
             metadata,
-            transformFile,
-            transformClassName,
             sourceTransformUrl,
             destinationTransformUrl,
+            config.destination.objectStore.useIceberg,
             PipelineEnvironment.values
         )
     }

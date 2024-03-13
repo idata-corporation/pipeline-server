@@ -1,4 +1,4 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.common.model.spark
 
 /*
 IData Pipeline
@@ -18,12 +18,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-object BuildInfoUtil {
-    val version: String = "2.3.4"
-    private val transformClass = "net.idata.pipeline.transform.Transform"
+case class EmrProperties(
+                            masterNodeIp: String
+                        )
 
-    def getTransformInfo(environment: String): (String, String) = {
-        val file = "s3://" + environment + "-config/spark/" + "pipeline-transform-assembly-" + version + ".jar"
-        (file, transformClass)
-    }
-}
+case class EksEmrProperties(
+                               virtualClusterId: String,
+                               configurationFileUrl: String,
+                               releaseLabel: String,
+                               executionRoleArn: String,
+                               monitoringLogUri: String,
+                               cloudWatchLogGroupName: String
+                           )

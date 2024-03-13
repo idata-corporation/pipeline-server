@@ -1,5 +1,8 @@
 package net.idata.pipeline.common.model
 
+import net.idata.pipeline.common.model.cdc.CDCMessageThreshold
+import net.idata.pipeline.common.model.spark.SparkProperties
+
 /*
 IData Pipeline
 Copyright (C) 2024 IData Corporation (http://www.idata.net)

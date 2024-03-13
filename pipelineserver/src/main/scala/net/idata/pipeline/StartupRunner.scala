@@ -19,14 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-import net.idata.pipeline.common.model.{CDCMessageThreshold, EksEmrProperties, EmrProperties, PipelineEnvironment, PipelineException, SparkProperties}
+import net.idata.pipeline.common.model._
+import net.idata.pipeline.common.model.cdc.CDCMessageThreshold
+import net.idata.pipeline.common.model.spark.{EksEmrProperties, EmrProperties, SparkJobConfiguration, SparkProperties}
 import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.controller.CDCConsumerRunner
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
 import org.springframework.stereotype.Component
-import scala.collection.JavaConverters._
 
 @Component
 class StartupRunner extends ApplicationRunner {
@@ -104,6 +105,18 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.elasticMapReduce.eksemr.logUri}")
     var eksEmrMonitoringLogUri: String = _
 
+    @Value("${spark.jobConfiguration.driverMemory}")
+    var sparkDriverMemory: String = _
+
+    @Value("${spark.jobConfiguration.executorMemory}")
+    var sparkExecutorMemory: String = _
+
+    @Value("${spark.jobConfiguration.numExecutors}")
+    var sparkNumExecutors: Int = _
+
+    @Value("${spark.jobConfiguration.executorCores}")
+    var sparkExecutorCores: Int = _
+
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
@@ -159,11 +172,19 @@ class StartupRunner extends ApplicationRunner {
             }
         }
 
+        val sparkJobConfiguration = SparkJobConfiguration(
+            sparkDriverMemory,
+            sparkExecutorMemory,
+            sparkNumExecutors,
+            sparkExecutorCores
+        )
+
         val sparkProperties = SparkProperties(
             useEmr.toBoolean,
             useEksEmr.toBoolean,
             emrProperties,
-            eksEmrProperties
+            eksEmrProperties,
+            sparkJobConfiguration
         )
 
         val pipelineEnvironment = PipelineEnvironment(

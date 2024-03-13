@@ -1,6 +1,4 @@
-package net.idata.pipeline.model
-
-import net.idata.pipeline.common.model.PipelineEnvironment
+package net.idata.pipeline.common.model.spark
 
 /*
 IData Pipeline
@@ -20,9 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-case class SparkJobProperties(
-                                 sourceUrl: String,
-                                 destinationUrl: String,
-                                 jobContext: JobContext,
-                                 pipelineEnvironment: PipelineEnvironment
-                             )
+case class SparkProperties(
+                              useEmr: Boolean,
+                              useEksEmr: Boolean,
+                              emrProperties: EmrProperties,
+                              eksEmrProperties: EksEmrProperties,
+                              jobConfiguration: SparkJobConfiguration   // Default spark job configuration
+                          )
