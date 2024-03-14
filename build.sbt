@@ -93,9 +93,9 @@ lazy val springDependencies =
 
 lazy val sparkDependencies =
     new {
-        val sparkcore   = "org.apache.spark" %% "spark-core" % "3.1.1"
-        val sparksql    = "org.apache.spark" %% "spark-sql" % "3.1.1"
-        val sparkhive   = "org.apache.spark" %% "spark-hive" % "3.1.1"
+        val sparkcore   = "org.apache.spark" %% "spark-core" % "3.5.1"
+        val sparksql    = "org.apache.spark" %% "spark-sql" % "3.5.1"
+        val sparkhive   = "org.apache.spark" %% "spark-hive" % "3.5.1"
         val deltacore   = "io.delta" %% "delta-core" % "1.0.0"
         val apachepoi   = "org.apache.poi" % "poi" % "5.0.0"
         val apachepoixml = "org.apache.poi" % "poi-ooxml" % "5.0.0"
