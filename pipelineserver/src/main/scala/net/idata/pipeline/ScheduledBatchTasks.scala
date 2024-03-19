@@ -55,22 +55,25 @@ class ScheduledBatchTasks {
     private def checkCDCMessageQueue(): Unit = {
         try {
             if(isAppInitialized) {
-                synchronized {
-                    val messages = QueueUtil.receiveMessages(PipelineEnvironment.values.cdcMesssageQueue, maxMessages = 10)
+                // Is CDC setup for internal message retrieval?
+                if(PipelineEnvironment.values.cdcMesssageQueue != null) {
+                    synchronized {
+                        val messages = QueueUtil.receiveMessages(PipelineEnvironment.values.cdcMesssageQueue, maxMessages = 10)
 
-                    val gson = new Gson
-                    val messageCount = messages.asScala.length
-                    messages.asScala.foreach(message => {
-                        val before = System.currentTimeMillis
+                        val gson = new Gson
+                        val messageCount = messages.asScala.length
+                        messages.asScala.foreach(message => {
+                            val before = System.currentTimeMillis
 
-                        val listType = new TypeToken[java.util.ArrayList[DebeziumMessage]] {}.getType
-                        val messages: java.util.List[DebeziumMessage] = gson.fromJson(message.getBody, listType)
-                        new CDCMessageProcessor().process(messages.asScala.toList)
-                        QueueUtil.deleteMessage(PipelineEnvironment.values.cdcMesssageQueue, message.getReceiptHandle)
+                            val listType = new TypeToken[java.util.ArrayList[DebeziumMessage]] {}.getType
+                            val messages: java.util.List[DebeziumMessage] = gson.fromJson(message.getBody, listType)
+                            new CDCMessageProcessor().process(messages.asScala.toList)
+                            QueueUtil.deleteMessage(PipelineEnvironment.values.cdcMesssageQueue, message.getReceiptHandle)
 
-                        val totalTime=System.currentTimeMillis-before
-                        logger.info("Milliseconds to process " + messageCount.toString + " messages: " + totalTime.toString)
-                    })
+                            val totalTime=System.currentTimeMillis-before
+                            logger.info("Milliseconds to process " + messageCount.toString + " messages: " + totalTime.toString)
+                        })
+                    }
                 }
             }
         } catch {

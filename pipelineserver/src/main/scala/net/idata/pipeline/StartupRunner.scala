@@ -64,6 +64,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.sns.sendCDCNotifications}")
     var snsSendCDCNotifications: Boolean = _
 
+    @Value("${aws.sqs.sendCDCMessageQueue}")
+    var snsSendCDCMessageQueue: Boolean = _
+
     @Value("${aws.sqs.ttlFileNotifierQueueMessages}")
     var ttlFileNotifierQueueMessages: Int = _
 
@@ -86,7 +89,6 @@ class StartupRunner extends ApplicationRunner {
     private def initPipelineEnvironment(): Unit = {
         // Set default values based upon the environment name
         val fileNotifierQueue = environment + "-file-notifier"
-        val cdcMessageQueue = environment + "-cdc-message.fifo"
         val datasetTableName = environment + "-dataset"
         val archivedMetadataTableName = environment + "-archived-metadata"
         val datasetStatusTableName = environment + "-dataset-status"
@@ -104,6 +106,13 @@ class StartupRunner extends ApplicationRunner {
         val cdcTopicArn = {
             if(snsSendCDCNotifications)
                 NotificationUtil.getTopicArn(environment + "-cdc-notification.fifo")
+            else
+                null
+        }
+
+        val cdcMessageQueue = {
+            if(snsSendCDCMessageQueue)
+                environment + "-cdc-message.fifo"
             else
                 null
         }

@@ -160,6 +160,7 @@ class CDCConsumerRunner extends Runnable {
                 attributes.put("table", debeziumMessage.tableName)
 
                 val gson = new Gson
+                logger.info("Sending message for table: " + debeziumMessage.tableName + " to topic: " + PipelineEnvironment.values.cdcTopicArn)
                 NotificationUtil.addFifo(PipelineEnvironment.values.cdcTopicArn, gson.toJson(debeziumMessage), attributes.asScala.toMap)
             })
         }
