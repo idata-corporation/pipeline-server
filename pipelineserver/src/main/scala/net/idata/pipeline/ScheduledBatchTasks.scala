@@ -21,12 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import net.idata.pipeline.common.model.PipelineEnvironment
 import net.idata.pipeline.common.model.aws.SQSMessageS3
 import net.idata.pipeline.common.util.{NoSQLDbUtil, QueueUtil}
 import net.idata.pipeline.controller.{FileNotifier, JobRunner}
 import net.idata.pipeline.model._
-import net.idata.pipeline.util.DataPuller
+import net.idata.pipeline.util.{CDCMessageProcessor, DataPuller}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -53,7 +54,6 @@ class ScheduledBatchTasks {
     @Scheduled(fixedRateString = "${schedule.checkCDCMessageQueue}")
     private def checkCDCMessageQueue(): Unit = {
         try {
-            /*
             if(isAppInitialized) {
                 synchronized {
                     val messages = QueueUtil.receiveMessages(PipelineEnvironment.values.cdcMesssageQueue, maxMessages = 10)
@@ -73,7 +73,6 @@ class ScheduledBatchTasks {
                     })
                 }
             }
-             */
         } catch {
             case e: Exception =>
                 logger.error("checkCDCMessageQueue error: " + Throwables.getStackTraceAsString(e))
