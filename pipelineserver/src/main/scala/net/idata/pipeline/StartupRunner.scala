@@ -26,7 +26,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
 import org.springframework.stereotype.Component
-import scala.collection.JavaConverters._
 
 @Component
 class StartupRunner extends ApplicationRunner {

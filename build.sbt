@@ -83,6 +83,7 @@ lazy val dependencies =
         val mysql               = "mysql" % "mysql-connector-java" % "8.0.32"
         val kafka               = "org.apache.kafka" %% "kafka" % "3.5.1"
         val kafkaclients        = "org.apache.kafka" % "kafka-clients" % "3.5.1"
+        val debezium            = "io.debezium" % "debezium-core" % "2.5.2.Final"
     }
 
 lazy val springDependencies =
@@ -130,7 +131,8 @@ lazy val commonDependencies = Seq(
     dependencies.postgres,
     dependencies.mssql,
     dependencies.mysql,
-    dependencies.kafkaclients
+    dependencies.kafkaclients,
+    dependencies.debezium
 )
 
 lazy val commonSpringDependencies = Seq(

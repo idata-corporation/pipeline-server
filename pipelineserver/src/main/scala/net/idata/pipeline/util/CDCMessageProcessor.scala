@@ -1,82 +1,34 @@
 package net.idata.pipeline.util
 
-import com.google.common.base.Throwables
-import com.google.gson.Gson
-import net.idata.pipeline.common.model.{DatasetConfig, Notification, PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.{DatasetConfigIO, NotificationUtil, QueueUtil}
-import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
-import org.slf4j.{Logger, LoggerFactory}
+/*
+IData Pipeline
+Copyright (C) 2024 IData Corporation (http://www.idata.net)
 
-import java.nio.charset.StandardCharsets
-import java.util.Base64
-import scala.collection.JavaConverters._
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+import com.google.common.base.Throwables
+import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
+import net.idata.pipeline.common.util.DatasetConfigIO
+import net.idata.pipeline.model.DebeziumMessage
+import org.slf4j.{Logger, LoggerFactory}
 
 class CDCMessageProcessor {
     private val logger: Logger = LoggerFactory.getLogger(classOf[CDCMessageProcessor])
 
-    def process(cdcMessages: List[CDCMessage]): Unit = {
-        val messages = cdcMessages.map(cdcMessage => {
-            val decodedValue = new String(Base64.getDecoder.decode(cdcMessage.value), StandardCharsets.UTF_8)
-            parseMessage(PipelineEnvironment.values.cdcDebeziumKafkaTopic, cdcMessage.topic, decodedValue)
-        })
-        processMessages(messages)
-    }
-
-    private def parseMessage(configuredTopic: String, topic: String, message: String): DebeziumMessage = {
-        val datasetName = {
-            val newTopic = topic.replace(configuredTopic, "")
-            newTopic.substring(1).replace(".", "_")
-        }
-
-        val before = {
-            val beforeNV = parseSubstring(message, "before=Struct{")
-            if(beforeNV != null)
-                beforeNV.split(",").map(_.split("=")).map(a=>(a(0), a(1))).toMap
-            else
-                null
-        }.asJava
-
-        val after = {
-            val afterNV = parseSubstring(message, "after=Struct{")
-            if(afterNV != null)
-                afterNV.split(",").map(_.split("=")).map(a=>(a(0), a(1))).toMap
-            else
-                null
-        }.asJava
-
-        val isInsert = before == null && after != null
-        val isUpdate = before != null && after != null
-        val isDelete = before != null && after == null
-
-        val debeziumMessage = DebeziumMessage(topic, datasetName, isInsert, isUpdate, isDelete, before, after)
-        if(PipelineEnvironment.values.cdcTopicArn != null)
-            writeToCDCTopic(debeziumMessage)
-        debeziumMessage
-    }
-
-    private def writeToCDCTopic(debeziumMessage: DebeziumMessage): Unit = {
-        // Create the message attributes for the SNS filter policy
-        val attributes = new java.util.HashMap[String, String]
-        attributes.put("dataset", debeziumMessage.datasetName)
-        attributes.put("cdcTopic", debeziumMessage.topic)
-
-        val gson = new Gson
-        NotificationUtil.addFifo(PipelineEnvironment.values.cdcTopicArn, gson.toJson(debeziumMessage), attributes.asScala.toMap)
-    }
-
-    private def parseSubstring(initialValue: String, searchFor: String): String = {
-        if(initialValue.contains(searchFor)) {
-            val found = initialValue.substring(initialValue.indexOf(searchFor))
-            if(found == null)
-                null
-            else
-                found.substring(searchFor.length, found.indexOf("}"))
-        }
-        else
-            null
-    }
-
-    private def processMessages(messages: List[DebeziumMessage]): Unit = {
+    def process(messages: List[DebeziumMessage]): Unit = {
         val configs = messages.map(message => {
             val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, message.datasetName)
             if (config == null)

@@ -1,7 +1,5 @@
 package net.idata.pipeline.model
 
-import net.idata.pipeline.common.model.PipelineEnvironment
-
 /*
 IData Pipeline
 Copyright (C) 2024 IData Corporation (http://www.idata.net)
@@ -19,6 +17,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+import net.idata.pipeline.common.model.PipelineEnvironment
 
 case class SparkJobProperties(
                                  sourceUrl: String,
