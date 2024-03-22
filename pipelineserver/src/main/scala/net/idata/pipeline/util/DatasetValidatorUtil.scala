@@ -151,6 +151,16 @@ object DatasetValidatorUtil {
             }
         }
 
+        // CDC Attributes
+        if(config.cdcAttributes != null) {
+            if(config.cdcAttributes.database == null)
+                throw new PipelineException("For the 'cdcAttributes' section, the 'database' field must be defined")
+            if(config.cdcAttributes.schema == null)
+                throw new PipelineException("For the 'cdcAttributes' section, the 'schema' field must be defined")
+            if(config.cdcAttributes.table == null)
+                throw new PipelineException("For the 'cdcAttributes' section, the 'table' field must be defined")
+        }
+
         // Destination object store
         if(config.destination.objectStore != null) {
             if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes == null)
