@@ -86,14 +86,14 @@ class CDCConsumerRunner extends Runnable {
     }
 
     private def parseMessage(configuredTopic: String, topic: String, json: String): DebeziumMessage = {
-        val datasetName = {
-            val newTopic = topic.replace(configuredTopic, "")
-            newTopic.substring(1).replace(".", "_")
-        }
-
         val gson = new Gson()
         val message =  gson.fromJson(json, classOf[CDCMessage])
         if(shouldProcess(message)) {
+            val datasetName = {
+                val newTopic = topic.replace(configuredTopic, "")
+                newTopic.substring(1).replace(".", "_")
+            }
+
             val before = {
                 if (message.before != null)
                     message.before
