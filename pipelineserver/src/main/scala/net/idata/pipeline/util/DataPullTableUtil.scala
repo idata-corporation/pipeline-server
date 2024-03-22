@@ -44,6 +44,13 @@ object DataPullTableUtil {
         NoSQLDbUtil.putItemJSON(PipelineEnvironment.values.dataPullTableName, "dataset", dataset, "json", gson.toJson(datasetPull))
     }
 
+    def deleteEntryIfExists(dataset: String): Unit = {
+        // Make sure an entry already exists for the key
+        val existing = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.dataPullTableName, "dataset", dataset, "json").orNull
+        if(existing != null)
+            NoSQLDbUtil.deleteItemJSON(PipelineEnvironment.values.dataPullTableName, "dataset", dataset)
+    }
+
     def getAll: List[DatasetPull] = {
         val jsonItems = NoSQLDbUtil.getAllItemsAsJSON(PipelineEnvironment.values.dataPullTableName)
         val gson = new Gson()

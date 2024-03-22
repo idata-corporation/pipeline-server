@@ -95,6 +95,10 @@ class DatasetAPIController {
             if(modifiedConfig.source.databaseAttributes != null)
                 DataPullTableUtil.initialize(modifiedConfig.name, modifiedConfig.source.databaseAttributes.cronExpression)
 
+            // If the dataset is mapped to CDC, initialize the cdc mapper table
+            if(modifiedConfig.cdcAttributes != null)
+                CDCMapperUtil.initialize(modifiedConfig.name, modifiedConfig.cdcAttributes)
+
             // If the destination is object store, create a Glue table if not manually managing Glue for this dataset?
             if(config.destination.objectStore != null) {
                 if(config.destination.objectStore.manageGlueTableManually)
@@ -128,6 +132,12 @@ class DatasetAPIController {
             val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, dataset)
             if(config == null)
                 throw new PipelineException("Dataset: " + dataset + " is not configured in the NoSQL database")
+
+            if(config.source.databaseAttributes != null)
+                DataPullTableUtil.deleteEntryIfExists(config.name)
+
+            if(config.cdcAttributes != null)
+                CDCMapperUtil.deleteEntryIfExists(config.cdcAttributes)
 
             // Delete the json configuration
             NoSQLDbUtil.deleteItemJSON(PipelineEnvironment.values.datasetTableName, "name", dataset)

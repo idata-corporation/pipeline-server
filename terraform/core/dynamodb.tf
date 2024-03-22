@@ -110,3 +110,19 @@ resource "aws_dynamodb_table" "data-pull" {
     Name = var.environment_name
   }
 }
+
+resource "aws_dynamodb_table" "cdc" {
+  name         = "${var.environment_name}-cdc-mapper"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "name"
+  table_class  = "STANDARD"
+
+  attribute {
+    name = "name"
+    type = "S"
+  }
+
+  tags = {
+    Name = var.environment_name
+  }
+}

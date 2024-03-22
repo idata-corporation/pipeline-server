@@ -23,7 +23,8 @@ case class DatasetConfig(
                             source: Source,
                             dataQuality: DataQuality,
                             transformation: Transformation,
-                            destination: Destination
+                            destination: Destination,
+                            cdcAttributes: CDCAttributes
                         )
 
 case class Source(
@@ -161,3 +162,9 @@ case class Redshift(
                        keyFields: java.util.List[String],
                        useJsonOptions: Boolean
                    )
+
+case class CDCAttributes(
+                            database: String,
+                            schema: String,
+                            table: String
+                        )

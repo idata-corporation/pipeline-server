@@ -94,6 +94,7 @@ class StartupRunner extends ApplicationRunner {
         val datasetStatusTableName = environment + "-dataset-status"
         val fileNotifierMessageTableName = environment + "-file-notifier-message"
         val datasetPullTableName = environment + "-data-pull"
+        val cdcMapperTableName = environment + "-cdc-mapper"
 
         // Send SNS dataset notifications?
         val datasetTopicArn = {
@@ -135,6 +136,7 @@ class StartupRunner extends ApplicationRunner {
             datasetStatusTableName,
             fileNotifierMessageTableName,
             datasetPullTableName,
+            cdcMapperTableName,
             useApiKeys,
             apiKeysSecretName,
             snowflakeSecretName,

@@ -89,11 +89,6 @@ class CDCConsumerRunner extends Runnable {
         val gson = new Gson()
         val message =  gson.fromJson(json, classOf[CDCMessage])
         if(shouldProcess(message)) {
-            val datasetName = {
-                val newTopic = topic.replace(configuredTopic, "")
-                newTopic.substring(1).replace(".", "_")
-            }
-
             val before = {
                 if (message.before != null)
                     message.before
@@ -113,7 +108,6 @@ class CDCConsumerRunner extends Runnable {
 
             DebeziumMessage(
                 topic,
-                datasetName,
                 message.source.schema,
                 message.source.db,
                 message.source.table,
@@ -155,7 +149,6 @@ class CDCConsumerRunner extends Runnable {
                 // Create the message attributes for the SNS filter policy
                 val attributes = new java.util.HashMap[String, String]
                 attributes.put("cdcTopic", debeziumMessage.topic)
-                attributes.put("dataset", debeziumMessage.datasetName)
                 attributes.put("schema", debeziumMessage.schemaName)
                 attributes.put("database", debeziumMessage.databaseName)
                 attributes.put("table", debeziumMessage.tableName)

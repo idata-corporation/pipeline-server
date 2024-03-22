@@ -30,14 +30,16 @@ class CDCMessageProcessor {
 
     def process(messages: List[DebeziumMessage]): Unit = {
         val configs = messages.map(message => {
-            val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, message.datasetName)
+            val datasetName = CDCMapperUtil.getDatasetName(message.databaseName, message.schemaName, message.tableName)
+            val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, datasetName)
             if (config == null)
-                throw new PipelineException("CDC message error, dataset configuration: " + message.datasetName + " was not found in the NoSQL table: " + PipelineEnvironment.values.datasetTableName)
+                throw new PipelineException("CDC message error, dataset configuration: " + datasetName + " was not found in the NoSQL table: " + PipelineEnvironment.values.datasetTableName)
             config
         }).distinct
 
         val groupedByDestination = messages.map(message => {
-            val config = configs.find(_.name.compareTo(message.datasetName) == 0).orNull
+            val datasetName = CDCMapperUtil.getDatasetName(message.databaseName, message.schemaName, message.tableName)
+            val config = configs.find(_.name.compareTo(datasetName) == 0).orNull
             if (config.destination.objectStore != null)
                 ("objectStore", config, message)
             else if (config.destination.database != null && config.destination.database.snowflake != null)

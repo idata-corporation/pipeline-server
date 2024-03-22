@@ -39,6 +39,7 @@ case class PipelineEnvironment(
                                   datasetStatusTableName: String,
                                   fileNotifierMessageTableName: String,
                                   dataPullTableName: String,
+                                  cdcMapperTableName: String,
                                   useApiKeys: Boolean,
                                   apiKeysSecretName: String,
                                   snowflakeSecretName: String,
