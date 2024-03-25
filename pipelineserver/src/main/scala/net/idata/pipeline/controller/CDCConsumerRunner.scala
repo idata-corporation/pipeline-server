@@ -54,7 +54,7 @@ class CDCConsumerRunner extends Runnable {
                 if(messagesReceived)
                     logger.info("Kafka topic messages received: " + records.count().toString)
                 records.asScala.foreach(consumerRecord => {
-                    logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", value: " + consumerRecord.value())
+                    //logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", value: " + consumerRecord.value())
 
                     val debeziumMessage = parseMessage(PipelineEnvironment.values.cdcDebeziumKafkaTopic, consumerRecord.topic(), consumerRecord.value())
                     if(debeziumMessage != null) {

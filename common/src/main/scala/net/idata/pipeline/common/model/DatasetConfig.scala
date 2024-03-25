@@ -117,6 +117,7 @@ case class DatabaseAttributes(
                                  mssqlSecretsName: String,
                                  mysqlSecretsName: String,
                                  cronExpression: String,
+                                 database: String,
                                  schema: String,
                                  table: String,
                                  includeFields: java.util.List[String],

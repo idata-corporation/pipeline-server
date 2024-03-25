@@ -92,6 +92,10 @@ class DataPuller {
                 sql.append("select ")
                 sql.append(fieldNames.mkString(","))
                 sql.append(" from ")
+                if(databaseAttributes.database != null)
+                    sql.append(databaseAttributes.database + ".")
+                if(databaseAttributes.schema != null)
+                    sql.append(databaseAttributes.schema + ".")
                 sql.append(databaseAttributes.table)
                 if (datasetPull.lastPullTimestampUsed != null) {
                     sql.append(" where ")

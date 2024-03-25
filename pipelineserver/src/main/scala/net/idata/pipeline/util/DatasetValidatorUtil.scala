@@ -100,8 +100,6 @@ object DatasetValidatorUtil {
                 throw new PipelineException("If 'source.databaseAttributes.cronExpression' is invalid: " + config.source.databaseAttributes.cronExpression)
 
             if(config.source.databaseAttributes.sqlOverride == null) {
-                if(config.source.databaseAttributes.schema == null)
-                    throw new PipelineException("If 'source.databaseAttributes' is defined, the 'schema' field must also be defined")
                 if(config.source.databaseAttributes.table == null)
                     throw new PipelineException("If 'source.databaseAttributes' is defined, the 'table' field must also be defined")
                 if(config.source.databaseAttributes.timestampFieldName == null)
