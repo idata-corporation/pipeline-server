@@ -36,7 +36,7 @@ aws:
   secretsManager:
     apiKeysSecretName: idata-poc-api-keys
     snowflakeSecretName: idata-poc-snowflakesecrets
-    redshiftSecretName: idata-redshift-secrets-smartx-test
+    redshiftSecretName: idata-poc-redshiftsecrets
   sns:
     sendDatasetNotifications: "true"
     sendCDCNotifications: "true"
