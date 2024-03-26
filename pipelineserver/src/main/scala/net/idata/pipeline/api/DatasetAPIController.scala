@@ -24,6 +24,7 @@ import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, Pipe
 import net.idata.pipeline.common.util.aws.GlueUtil
 import net.idata.pipeline.common.util.{DatasetConfigIO, NoSQLDbUtil}
 import net.idata.pipeline.util._
+import net.idata.pipeline.util.cdc.CDCMapperUtil
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.http.{HttpStatus, MediaType, ResponseEntity}
 import org.springframework.web.bind.annotation._

@@ -19,13 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 import com.google.common.base.Throwables
-import net.idata.pipeline.common.model.PipelineException
-import net.idata.pipeline.model.JobContext
+import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
+import net.idata.pipeline.common.util.{GuidV5, ObjectStoreUtil}
+import net.idata.pipeline.model.{GlobalJobContext, JobContext}
 import net.idata.pipeline.util._
 
+import java.time.Instant
+
 class JobRunner(jobContext: JobContext) extends Runnable {
+    private val config = jobContext.config
+
     def run(): Unit = {
-        val config = jobContext.config
         val statusUtil = jobContext.statusUtil
 
         statusUtil.overrideProcessName(this.getClass.getSimpleName)
@@ -44,8 +48,19 @@ class JobRunner(jobContext: JobContext) extends Runnable {
                     jobContext
             }
 
-            if(config.destination.objectStore != null)
-                new ObjectStoreLoader(jobContextTransform).process()
+            if(config.destination.objectStore != null) {
+                // Default to Athena, unless useSparkCluster is set
+                val useSparkCluster = config.destination.objectStore.useSparkCluster
+
+                if(useSparkCluster) {
+                    val newJobContext = createSourceFileForSpark(jobContext)
+
+                    val jobId = new SparkController().startJob(newJobContext)
+                    GlobalJobContext.replaceJobContext(newJobContext.copy(sparkJobId = jobId))
+                }
+                else
+                    new ObjectStoreLoader(jobContextTransform).process()
+            }
 
             if(config.destination.database != null) {
                 if(config.destination.database.snowflake != null)
@@ -61,5 +76,19 @@ class JobRunner(jobContext: JobContext) extends Runnable {
                 statusUtil.error("end","Process completed, error: " + Throwables.getStackTraceAsString(e))
                 throw new PipelineException("Pipeline error: " + Throwables.getStackTraceAsString(e))
         }
+    }
+
+    private def createSourceFileForSpark(jobContext: JobContext): JobContext = {
+        // If using a Spark cluster for transformation to parquet, if the data has been transformed,
+        // create a new source file for the Spark cluster to use
+        if(config.transformation != null) {
+            val sourceUrl = "s3://" + PipelineEnvironment.values.environment + "-temp/spark/" + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString) + ".out"
+            ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(sourceUrl), ObjectStoreUtil.getKey(sourceUrl), jobContext.data.rawData)
+
+            val sparkRuntime = jobContext.sparkRuntime.copy(sourceTransformUrl = sourceUrl)
+            jobContext.copy(sparkRuntime = sparkRuntime)
+        }
+        else
+            jobContext
     }
 }

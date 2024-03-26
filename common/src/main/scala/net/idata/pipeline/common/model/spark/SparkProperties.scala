@@ -1,4 +1,4 @@
-package net.idata.pipeline.common.model
+package net.idata.pipeline.common.model.spark
 
 /*
 IData Pipeline
@@ -18,10 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// Message threshold values are used to determine when writing to the data store, if faster to write data to
-// a file rather than use JDBC directly to store the data
-case class CDCMessageThreshold(
-                                  objectStore: Int,
-                                  redshift: Int,
-                                  snowflake: Int
-                              )
+case class SparkProperties(
+                              useEmr: Boolean,
+                              useEksEmr: Boolean,
+                              emrProperties: EmrProperties,
+                              eksEmrProperties: EksEmrProperties,
+                              jobConfiguration: SparkJobConfiguration   // Default spark job configuration
+                          )

@@ -1,4 +1,4 @@
-package net.idata.pipeline.model
+package net.idata.pipeline.common.model.spark
 
 /*
 IData Pipeline
@@ -18,14 +18,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-case class DebeziumMessage(
-                              topic: String,
-                              schemaName: String,
-                              databaseName: String,
-                              tableName: String,
-                              isInsert: Boolean,
-                              isUpdate: Boolean,
-                              isDelete: Boolean,
-                              before: java.util.Map[String, String],
-                              after: java.util.Map[String, String],
-                          )
+case class EmrProperties(
+                            masterNodeIp: String
+                        )
+
+case class EksEmrProperties(
+                               virtualClusterId: String,
+                               configurationFileUrl: String,
+                               releaseLabel: String,
+                               executionRoleArn: String,
+                               monitoringLogUri: String,
+                               cloudWatchLogGroupName: String
+                           )

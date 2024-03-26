@@ -1,4 +1,4 @@
-package net.idata.pipeline.model
+package net.idata.pipeline.util
 
 /*
 IData Pipeline
@@ -18,19 +18,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.common.model.spark.SparkRuntime
-import net.idata.pipeline.common.model.{DatasetConfig, DatasetMetadata}
-import net.idata.pipeline.common.util.StatusUtil
+object BuildInfoUtil {
+    val version: String = "2.3.4"
+    private val transformClass = "net.idata.pipeline.transform.Transform"
 
-case class JobContext(
-                         pipelineToken: String,
-                         metadata: DatasetMetadata,
-                         data: Data,
-                         config: DatasetConfig,
-                         state: JobState,
-                         thread: Thread,
-                         statusUtil: StatusUtil,
-                         sparkRuntime: SparkRuntime,
-                         sparkJobId: String
-                     )
-
+    def getTransformInfo(environment: String): (String, String) = {
+        val file = "s3://" + environment + "-config/spark/" + "pipeline-transform-assembly-" + version + ".jar"
+        (file, transformClass)
+    }
+}

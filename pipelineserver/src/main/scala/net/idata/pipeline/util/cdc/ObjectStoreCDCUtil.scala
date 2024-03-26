@@ -1,4 +1,4 @@
-package net.idata.pipeline.util
+package net.idata.pipeline.util.cdc
 
 /*
 IData Pipeline
@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.{GuidV5, ObjectStoreSQLUtil}
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.model.cdc.DebeziumMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant

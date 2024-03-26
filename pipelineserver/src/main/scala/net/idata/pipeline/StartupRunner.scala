@@ -19,7 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-import net.idata.pipeline.common.model.{CDCMessageThreshold, PipelineEnvironment}
+import net.idata.pipeline.common.model.PipelineEnvironment
+import net.idata.pipeline.common.model.cdc.CDCMessageThreshold
+import net.idata.pipeline.common.model.spark.{EksEmrProperties, EmrProperties, SparkJobConfiguration, SparkProperties}
 import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.controller.CDCConsumerRunner
 import org.slf4j.{Logger, LoggerFactory}
@@ -79,6 +81,45 @@ class StartupRunner extends ApplicationRunner {
     @Value("${cdc.messageThreshold.snowflake}")
     var cdcThresholdSnowflake: Int = _
 
+    @Value("${aws.elasticMapReduce.emr.enabled}")
+    var useEmr: String = _
+
+    @Value("${aws.elasticMapReduce.emr.masterNodeIp}")
+    var emrMasterNodeIp: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.enabled}")
+    var useEksEmr: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.virtualClusterId}")
+    var eksEmrVirtualClusterId: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.executionRoleArn}")
+    var eksEmrExecutionRoleArn: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.releaseLabel}")
+    var eksEmrReleaseLabel: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.configurationFileUrl}")
+    var eksEmrConfigurationFileUrl: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.cloudwatchLogGroupName}")
+    var eksEmrCloudWatchLogGroupName: String = _
+
+    @Value("${aws.elasticMapReduce.eksemr.logUri}")
+    var eksEmrMonitoringLogUri: String = _
+
+    @Value("${spark.jobConfiguration.driverMemory}")
+    var sparkDriverMemory: String = _
+
+    @Value("${spark.jobConfiguration.executorMemory}")
+    var sparkExecutorMemory: String = _
+
+    @Value("${spark.jobConfiguration.numExecutors}")
+    var sparkNumExecutors: Int = _
+
+    @Value("${spark.jobConfiguration.executorCores}")
+    var sparkExecutorCores: Int = _
+
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
@@ -123,6 +164,39 @@ class StartupRunner extends ApplicationRunner {
             cdcThresholdRedshift,
             cdcThresholdSnowflake)
 
+        val (emrProperties, eksEmrProperties) = {
+            if(useEksEmr.toBoolean) {
+                val properties = EksEmrProperties(
+                    eksEmrVirtualClusterId,
+                    eksEmrConfigurationFileUrl,
+                    eksEmrReleaseLabel,
+                    eksEmrExecutionRoleArn,
+                    eksEmrMonitoringLogUri,
+                    eksEmrCloudWatchLogGroupName
+                )
+                (null, properties)
+            }
+            else {
+                val properties = EmrProperties(emrMasterNodeIp)
+                (properties, null)
+            }
+        }
+
+        val sparkJobConfiguration = SparkJobConfiguration(
+            sparkDriverMemory,
+            sparkExecutorMemory,
+            sparkNumExecutors,
+            sparkExecutorCores
+        )
+
+        val sparkProperties = SparkProperties(
+            useEmr.toBoolean,
+            useEksEmr.toBoolean,
+            emrProperties,
+            eksEmrProperties,
+            sparkJobConfiguration
+        )
+
         val pipelineEnvironment = PipelineEnvironment(
             environment,
             region,
@@ -144,7 +218,8 @@ class StartupRunner extends ApplicationRunner {
             cdcDebeziumKafkaTopic,
             cdcKafkaBootstrapServer,
             cdcKafkaGroupId,
-            cdcMessageThreshold
+            cdcMessageThreshold,
+            sparkProperties
         )
 
         PipelineEnvironment.init(pipelineEnvironment)

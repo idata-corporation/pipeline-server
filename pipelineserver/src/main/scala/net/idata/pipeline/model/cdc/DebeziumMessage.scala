@@ -1,4 +1,4 @@
-package net.idata.pipeline.model
+package net.idata.pipeline.model.cdc
 
 /*
 IData Pipeline
@@ -18,11 +18,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.common.model.PipelineEnvironment
-
-case class SparkJobProperties(
-                                 sourceUrl: String,
-                                 destinationUrl: String,
-                                 jobContext: JobContext,
-                                 pipelineEnvironment: PipelineEnvironment
-                             )
+case class DebeziumMessage(
+                              topic: String,
+                              schemaName: String,
+                              databaseName: String,
+                              tableName: String,
+                              isInsert: Boolean,
+                              isUpdate: Boolean,
+                              isDelete: Boolean,
+                              before: java.util.Map[String, String],
+                              after: java.util.Map[String, String],
+                          )

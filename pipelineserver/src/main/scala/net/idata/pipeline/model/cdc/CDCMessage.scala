@@ -1,4 +1,4 @@
-package net.idata.pipeline.model
+package net.idata.pipeline.model.cdc
 
 /*
 IData Pipeline

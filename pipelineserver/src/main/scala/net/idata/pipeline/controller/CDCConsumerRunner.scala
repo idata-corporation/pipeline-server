@@ -22,7 +22,7 @@ import com.google.common.base.Throwables
 import com.google.gson.{Gson, GsonBuilder}
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.{NotificationUtil, QueueUtil}
-import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
+import net.idata.pipeline.model.cdc.{CDCMessage, DebeziumMessage}
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}

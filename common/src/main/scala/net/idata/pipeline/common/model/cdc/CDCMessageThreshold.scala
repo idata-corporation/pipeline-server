@@ -1,4 +1,4 @@
-package net.idata.pipeline.model
+package net.idata.pipeline.common.model.cdc
 
 /*
 IData Pipeline
@@ -18,19 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.common.model.spark.SparkRuntime
-import net.idata.pipeline.common.model.{DatasetConfig, DatasetMetadata}
-import net.idata.pipeline.common.util.StatusUtil
-
-case class JobContext(
-                         pipelineToken: String,
-                         metadata: DatasetMetadata,
-                         data: Data,
-                         config: DatasetConfig,
-                         state: JobState,
-                         thread: Thread,
-                         statusUtil: StatusUtil,
-                         sparkRuntime: SparkRuntime,
-                         sparkJobId: String
-                     )
-
+// Message threshold values are used to determine when writing to the data store, if faster to write data to
+// a file rather than use JDBC directly to store the data
+case class CDCMessageThreshold(
+                                  objectStore: Int,
+                                  redshift: Int,
+                                  snowflake: Int
+                              )

@@ -21,6 +21,12 @@ schedule:
   checkCDCMessageQueue: "10000"
 environment: idata-poc
 useApiKeys: "false"
+spark:
+  jobConfiguration:
+    executorMemory: 8g
+    executorCores: "1"
+    numExecutors: "1"
+    driverMemory: 5g
 cdc:
   kafka:
     bootstrapServer: b-1.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
@@ -43,3 +49,15 @@ aws:
   sqs:
     ttlFileNotifierQueueMessages: "60"
     sendCDCMessageQueue: "false"
+  elasticMapReduce:
+    emr:
+      enabled: "true"
+      masterNodeIp: "na"
+    eksemr:
+      enabled: "false"
+      virtualClusterId: lf39nq0exg831vqoc7tz7894g
+      executionRoleArn: arn:aws:iam::116279234263:role/EMRContainers-JobExecutionRole
+      releaseLabel: emr-6.3.0-latest
+      configurationFileUrl: s3://idata-poc-config/spark/emr-config.json
+      cloudwatchLogGroupName: /eks-emr-logs/poc
+      logUri: s3://idata-poc-temp/

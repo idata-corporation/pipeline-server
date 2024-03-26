@@ -27,7 +27,9 @@ import net.idata.pipeline.common.model.aws.SQSMessageS3
 import net.idata.pipeline.common.util.{NoSQLDbUtil, QueueUtil}
 import net.idata.pipeline.controller.{FileNotifier, JobRunner}
 import net.idata.pipeline.model._
-import net.idata.pipeline.util.{CDCMessageProcessor, DataPuller}
+import net.idata.pipeline.model.cdc.DebeziumMessage
+import net.idata.pipeline.util.DataPuller
+import net.idata.pipeline.util.cdc.CDCMessageProcessor
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
