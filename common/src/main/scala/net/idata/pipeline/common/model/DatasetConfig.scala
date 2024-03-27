@@ -135,6 +135,7 @@ case class ObjectStore(
                           deleteBeforeWrite: Boolean,
                           manageGlueTableManually: Boolean,
                           useIceberg: Boolean,
+                          useDelta: Boolean,
                           keyFields: java.util.List[String],
                           useAthena: Boolean,
                           useSparkCluster: Boolean,

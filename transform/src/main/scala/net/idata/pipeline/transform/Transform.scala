@@ -48,7 +48,7 @@ object Transform {
             val sparkRuntime = gson.fromJson(arguments, classOf[SparkRuntime])
 
             // Initialize the Spark session
-            sparkSession = initSparkSession(sparkRuntime.useIceberg)
+            sparkSession = initSparkSession(sparkRuntime.useIceberg, sparkRuntime.useDelta)
 
             PipelineEnvironment.init(sparkRuntime.pipelineEnvironment)
 
@@ -79,7 +79,7 @@ object Transform {
         System.exit(exitCode)
     }
 
-    private def initSparkSession(useIceberg: Boolean): SparkSession = {
+    private def initSparkSession(useIceberg: Boolean, useDelta: Boolean): SparkSession = {
         val warehouseLocation = new File("spark-warehouse").getAbsolutePath
 
         if(useIceberg) {
@@ -87,12 +87,26 @@ object Transform {
                 .builder()
                 .appName(processName)
                 .config("spark.sql.warehouse.dir", warehouseLocation)           // Needed for repairing partitions via Hive
-                // Databricks Delta configurations
+                // Apache Iceberg configurations
                 .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
                 .config("spark.sql.catalog.glue_catalog", "org.apache.iceberg.spark.SparkCatalog")
                 .config("spark.sql.catalog.glue_catalog.warehouse", warehouseLocation)
                 .config("spark.sql.catalog.glue_catalog.catalog", "org.apache.iceberg.aws.glue.GlueCatalog")
                 .config("spark.sql.catalog.glue_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+                .enableHiveSupport()
+                .getOrCreate
+        }
+        else if(useDelta) {
+            SparkSession
+                .builder()
+                .appName(processName)
+                .config("spark.sql.warehouse.dir", warehouseLocation)           // Needed for repairing partitions via Hive
+                // Databricks Delta configurations
+                .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+                .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
+                .config("spark.databricks.hive.metastore.glueCatalog.enabled", "true")
+                .config("spark.databricks.delta.merge.repartitionBeforeWrite.enabled", "true")
                 .enableHiveSupport()
                 .getOrCreate
         }
@@ -132,9 +146,13 @@ object Transform {
         //println("dfTransformed")
         //dfTransformed.show(100, truncate = false)   // TODO: Only for debugging
 
-        // Write to objectStore?
-        val objectStoreUtil = new ObjectStoreUtil(config)
-        objectStoreUtil.write(dfTransformed, sparkRuntime.destinationTransformUrl)
+        // Write the data
+        if(config.destination.objectStore.useIceberg)
+            new IcebergUtil(config).write(dfTransformed)
+        else if(config.destination.objectStore.useDelta)
+            new DeltaUtil(config).write(dfTransformed, sparkRuntime.destinationTransformUrl)
+        else
+            new ParquetUtil(config).write(dfTransformed, sparkRuntime.destinationTransformUrl)
 
         // Write to a temp location for the REST API GET /dataset/data?pipelinetoken=?
         if(config.destination.objectStore.writeToTemporaryLocation)

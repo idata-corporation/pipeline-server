@@ -41,7 +41,6 @@ lazy val transform = project
         name := "transform",
         assemblySettingsSpark,
         libraryDependencies ++= commonSparkDependencies,
-        libraryDependencies ++= commonTransformSparkDependencies,
         Compile / unmanagedJars += file("./jars/redshift-jdbc42-2.0.0.4.jar")
     )
     .dependsOn(
@@ -94,12 +93,10 @@ lazy val springDependencies =
 
 lazy val sparkDependencies =
     new {
-        val sparkcore   = "org.apache.spark" %% "spark-core" % "3.1.1"
-        val sparksql    = "org.apache.spark" %% "spark-sql" % "3.1.1"
-        val sparkhive   = "org.apache.spark" %% "spark-hive" % "3.1.1"
-        val deltacore   = "io.delta" %% "delta-core" % "1.0.0"
-        val apachepoi   = "org.apache.poi" % "poi" % "5.0.0"
-        val apachepoixml = "org.apache.poi" % "poi-ooxml" % "5.0.0"
+        val sparkcore   = "org.apache.spark" %% "spark-core" % "3.5.0"
+        val sparksql    = "org.apache.spark" %% "spark-sql" % "3.5.0"
+        val sparkhive   = "org.apache.spark" %% "spark-hive" % "3.5.0"
+        val deltacore   = "io.delta" %% "delta-core" % "2.4.0"
     }
 
 lazy val commonDependencies = Seq(
@@ -143,12 +140,8 @@ lazy val commonSpringDependencies = Seq(
 lazy val commonSparkDependencies = Seq(
     sparkDependencies.sparkcore % "provided",
     sparkDependencies.sparksql % "provided",
-    sparkDependencies.sparkhive % "provided"
-)
-
-lazy val commonTransformSparkDependencies = Seq(
-    sparkDependencies.apachepoi,
-    sparkDependencies.apachepoixml
+    sparkDependencies.sparkhive % "provided",
+    sparkDependencies.deltacore
 )
 
 lazy val assemblySettings = Seq(

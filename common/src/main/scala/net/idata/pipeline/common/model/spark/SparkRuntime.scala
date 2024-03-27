@@ -28,5 +28,6 @@ case class SparkRuntime(
                            sourceTransformUrl: String,
                            destinationTransformUrl: String,
                            useIceberg: Boolean,
+                           useDelta: Boolean,
                            pipelineEnvironment: PipelineEnvironment
                        )

@@ -119,6 +119,7 @@ class FileNotifier {
             sourceTransformUrl,
             destinationTransformUrl,
             config.destination.objectStore.useIceberg,
+            config.destination.objectStore.useDelta,
             PipelineEnvironment.values
         )
     }
