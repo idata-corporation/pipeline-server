@@ -52,7 +52,7 @@ aws:
   elasticMapReduce:
     emr:
       enabled: "true"
-      masterNodeIp: 44.199.201.117
+      masterNodeIp: 44.211.230.176
     eksemr:
       enabled: "false"
       virtualClusterId: lf39nq0exg831vqoc7tz7894g

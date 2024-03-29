@@ -85,6 +85,7 @@ object LivyUtil {
 
         val gson = new Gson
         val jsonToPost = gson.toJson(payload)
+        logger.info("jsonToPost: " + jsonToPost)
         val response = HttpUtil.post(url, "application/json", jsonToPost, bearerToken = null, 15000, retry = true, retryWaitMillis = 10000)
         val sparkExecutorResult = gson.fromJson(response.mkString, classOf[EMRSparkExecutorResult])
         sparkExecutorResult.id.toString

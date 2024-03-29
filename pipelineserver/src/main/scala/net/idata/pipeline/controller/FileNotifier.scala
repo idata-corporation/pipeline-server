@@ -108,7 +108,7 @@ class FileNotifier {
             if(config.destination.objectStore.destinationBucketOverride != null)
                 "s3://" + config.destination.objectStore.destinationBucketOverride + "/" + config.destination.objectStore.prefixKey + "/" + config.name + "/parquet"
             else
-                "s3://" + environment + "-" + "-raw-plus" + "/" + config.destination.objectStore.prefixKey + "/" + config.name + "/parquet"
+                "s3://" + environment + "-raw-plus" + "/" + config.destination.objectStore.prefixKey + "/" + config.name + "/parquet"
         }
 
         spark.SparkRuntime(

@@ -70,7 +70,7 @@ object Transform {
         } catch {
             case e: Exception =>
                 println(Throwables.getStackTraceAsString(e))
-                StatusUtil.error("end", "Process failed with error: " + Throwables.getStackTraceAsString(e))
+                statusUtil.error("end", "Process failed with error: " + Throwables.getStackTraceAsString(e))
                 exitCode = -1
         } finally {
             sparkSession.close()

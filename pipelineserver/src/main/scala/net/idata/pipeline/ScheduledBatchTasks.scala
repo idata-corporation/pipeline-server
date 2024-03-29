@@ -160,7 +160,7 @@ class ScheduledBatchTasks {
 
         // Show running jobs
         GlobalJobContext.getAll.foreach(jobContext => {
-            if(jobContext.state ==  PROCESSING)
+            if(jobContext.state == PROCESSING)
                 logger.info(jobContext.pipelineToken + ": dataset: " + jobContext.config.name + ", " + jobContext.state.toString)
         })
     }
@@ -185,10 +185,14 @@ class ScheduledBatchTasks {
     private def startJob(jobContext: JobContext): Unit = {
         logger.info("Starting job for the dataset: " + jobContext.config.name)
 
-        // Start the db loading process
-        val thread = new Thread(new JobRunner(jobContext))
+        // Set state to PROCESSING
+        val newJobContext = jobContext.copy(state = PROCESSING)
+        GlobalJobContext.replaceJobContext(newJobContext)
+
+        // Start the job thread
+        val thread = new Thread(new JobRunner(newJobContext))
         thread.start()
-        GlobalJobContext.replaceJobContext(jobContext = jobContext.copy(state = PROCESSING, thread = thread))
+        GlobalJobContext.replaceJobContext(jobContext = newJobContext.copy(thread = thread))
     }
 
     private def checkExistingJobs(): Unit ={
