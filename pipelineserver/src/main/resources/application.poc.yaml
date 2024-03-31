@@ -29,14 +29,15 @@ spark:
     driverMemory: 5g
 cdc:
   kafka:
-    bootstrapServer: b-1.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
+    bootstrapServer: b-2.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
     groupId: idata-group
+    topicPollingInterval: "1000"
   debezium:
     kafkaTopic: testdb-topic
   messageThreshold:
-    objectStore: 10
-    redshift: 30
-    snowflake: 30
+    objectStore: "10"
+    redshift: "30"
+    snowflake: "30"
 aws:
   region: us-east-1
   secretsManager:
