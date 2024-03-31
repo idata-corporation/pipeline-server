@@ -46,6 +46,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${cdc.kafka.groupId}")
     var cdcKafkaGroupId: String = _
 
+    @Value("${cdc.kafka.topicPollingInterval}")
+    var cdcKafkaTopicPollingInterval: Int = _
+
     @Value("${aws.region}")
     var region: String = _
 
@@ -144,6 +147,7 @@ class StartupRunner extends ApplicationRunner {
             cdcDebeziumKafkaTopic,
             cdcKafkaBootstrapServer,
             cdcKafkaGroupId,
+            cdcKafkaTopicPollingInterval,
             cdcMessageThreshold
         )
 

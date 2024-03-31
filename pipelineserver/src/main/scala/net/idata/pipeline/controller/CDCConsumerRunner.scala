@@ -49,7 +49,7 @@ class CDCConsumerRunner extends Runnable {
             val messageList = new ListBuffer[DebeziumMessage]()
             var messageListSize = 0
             while (true) {
-                val records: ConsumerRecords[String, String] = consumer.poll(3000)
+                val records: ConsumerRecords[String, String] = consumer.poll(PipelineEnvironment.values.kafkaTopicPollingInterval)
                 val messagesReceived: Boolean = records.count() > 0
                 if(messagesReceived)
                     logger.info("Kafka topic messages received: " + records.count().toString)
