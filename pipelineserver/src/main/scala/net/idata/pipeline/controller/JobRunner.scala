@@ -48,11 +48,14 @@ class JobRunner(jobContext: JobContext) extends Runnable {
                 new ObjectStoreLoader(jobContextTransform).process()
 
             if(config.destination.database != null) {
-                if(config.destination.database.snowflake != null)
+                if(config.destination.database.useSnowflake)
                     new SnowflakeLoader(jobContextTransform).process()
 
-                if(config.destination.database.redshift != null)
+                if(config.destination.database.useRedshift)
                     new RedshiftLoader(jobContextTransform).process()
+
+                if(config.destination.database.usePostgres)
+                    new PostgresLoader(jobContextTransform).process()
             }
 
             statusUtil.info("end", "Process completed successfully")

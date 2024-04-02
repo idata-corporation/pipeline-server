@@ -56,7 +56,7 @@ class ScheduledBatchTasks {
         try {
             if(isAppInitialized) {
                 // Is CDC setup for internal message retrieval?
-                if(PipelineEnvironment.values.cdcMesssageQueue != null) {
+                if(PipelineEnvironment.values.cdcEnabled) {
                     synchronized {
                         val messages = QueueUtil.receiveMessages(PipelineEnvironment.values.cdcMesssageQueue, maxMessages = 10)
 

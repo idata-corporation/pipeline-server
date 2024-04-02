@@ -37,6 +37,9 @@ class StartupRunner extends ApplicationRunner {
     @Value("${useApiKeys}")
     var useApiKeys: Boolean = _
 
+    @Value("${cdc.enabled}")
+    var cdcEnabled: Boolean = _
+
     @Value("${cdc.debezium.kafkaTopic}")
     var cdcDebeziumKafkaTopic: String = _
 
@@ -60,6 +63,9 @@ class StartupRunner extends ApplicationRunner {
 
     @Value("${aws.secretsManager.redshiftSecretName}")
     var redshiftSecretName: String = _
+
+    @Value("${aws.secretsManager.postgresSecretName}")
+    var postgresSecretName: String = _
 
     @Value("${aws.sns.sendDatasetNotifications}")
     var snsSendDatasetNotifications: Boolean = _
@@ -85,7 +91,7 @@ class StartupRunner extends ApplicationRunner {
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
-        if(PipelineEnvironment.values.cdcDebeziumKafkaTopic != null)
+        if(cdcEnabled)
             initKafkaConsumer()
     }
 
@@ -131,6 +137,7 @@ class StartupRunner extends ApplicationRunner {
             region,
             fileNotifierQueue,
             ttlFileNotifierQueueMessages,
+            cdcEnabled,
             cdcMessageQueue,
             datasetTopicArn,
             cdcTopicArn,
@@ -144,6 +151,7 @@ class StartupRunner extends ApplicationRunner {
             apiKeysSecretName,
             snowflakeSecretName,
             redshiftSecretName,
+            postgresSecretName,
             cdcDebeziumKafkaTopic,
             cdcKafkaBootstrapServer,
             cdcKafkaGroupId,

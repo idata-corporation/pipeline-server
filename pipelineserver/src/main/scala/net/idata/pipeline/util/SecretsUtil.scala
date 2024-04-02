@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.aws.SecretsManagerUtil
-import net.idata.pipeline.model.{RedshiftSecrets, SnowflakeSecrets}
+import net.idata.pipeline.model.{PostgresSecrets, RedshiftSecrets, SnowflakeSecrets}
 
 object SecretsUtil {
     def redshiftSecrets(): RedshiftSecrets = {
@@ -79,6 +79,26 @@ object SecretsUtil {
             jdbcUrl,
             stageName,
             stageUrl
+        )
+    }
+
+    def postgresSecrets(): PostgresSecrets = {
+        val dbSecret = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.postgresSecretName)
+            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.snowflakeSecretName))
+        val username = dbSecret.get("username")
+        if (username == null)
+            throw new PipelineException("Could not retrieve the Postgres username from Secrets Manager")
+        val password = dbSecret.get("password")
+        if (password == null)
+            throw new PipelineException("Could not retrieve the Postgres password from Secrets Manager")
+        val jdbcUrl = dbSecret.get("jdbcUrl")
+        if (jdbcUrl == null)
+            throw new PipelineException("Could not retrieve the Postgres jdbcUrl from Secrets Manager")
+
+        PostgresSecrets(
+            username,
+            password,
+            jdbcUrl
         )
     }
 }

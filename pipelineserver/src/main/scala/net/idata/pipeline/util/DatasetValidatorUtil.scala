@@ -209,9 +209,11 @@ object DatasetValidatorUtil {
                 throw new PipelineException("If the 'destination.database' section is defined, the 'destination.database.table' must be defined")
 
             // Snowflake
-            if(config.destination.database.snowflake == null && config.destination.database.redshift == null)
-                throw new PipelineException("For the 'destination.database' section, you must define either the redshift or snowflake section")
-            if(config.destination.database.snowflake != null) {
+            if(!config.destination.database.useSnowflake && !config.destination.database.useRedshift && !config.destination.database.usePostgres)
+                throw new PipelineException("For the 'destination.database' section, you must select either useSnowflake, useRedshift or usePostgres")
+            if(config.destination.database.useSnowflake && config.destination.database.snowflake == null)
+                throw new PipelineException("If you have set 'useSnowflake' to true, you must define the 'destination.database.snowflake' section")
+            if(config.destination.database.useSnowflake) {
                 if(config.destination.database.snowflake.warehouse == null)
                     throw new PipelineException("If 'destination.database.snowflake' is defined, you must define the 'warehouse'")
                 if(config.destination.database.snowflake.createSemiStructuredFieldAs != null) {
@@ -224,11 +226,11 @@ object DatasetValidatorUtil {
                     }
                 }
                 if(config.source.fileAttributes != null && (config.source.fileAttributes.jsonAttributes != null || config.source.fileAttributes.xmlAttributes != null)) {
-                    if(config.destination.database.snowflake.keyFields != null)
-                        throw new PipelineException("destination.database.snowflake.keyFields are not supported for JSON or XML source files. You can place the JSON or XML in a column in a CSV file as an alternative.")
+                    if(config.destination.database.keyFields != null)
+                        throw new PipelineException("destination.database.keyFields are not supported for JSON or XML source files. You can place the JSON or XML in a column in a CSV file as an alternative.")
                 }
-                if(config.destination.database.snowflake.keyFields != null) {
-                    config.destination.database.snowflake.keyFields.forEach(field => {
+                if(config.destination.database.keyFields != null) {
+                    config.destination.database.keyFields.forEach(field => {
                         if(!schemaFieldNames.contains(field))
                             throw new PipelineException("Key field: " + field + " is not in the schema properties for this dataset")
                     })
@@ -236,11 +238,11 @@ object DatasetValidatorUtil {
             }
 
             // Redshift
-            if(config.destination.database.redshift != null) {
+            if(config.destination.database.useRedshift) {
                 if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null)
                     throw new PipelineException("Redshift does not support the ingestion of XML data")
-                if(config.destination.database.redshift.keyFields != null) {
-                    config.destination.database.redshift.keyFields.forEach(field => {
+                if(config.destination.database.keyFields != null) {
+                    config.destination.database.keyFields.forEach(field => {
                         if(!schemaFieldNames.contains(field))
                             throw new PipelineException("Key field: " + field + " is not in the schema properties for this dataset")
                     })
@@ -401,38 +403,13 @@ object DatasetValidatorUtil {
         val database = {
             // Key fields must be lower case
             if(config.destination.database != null) {
-                val (snowflake, redshift)  = {
-                    val snowflake = {
-                        if(config.destination.database.snowflake != null) {
-                            val fields = {
-                                if(config.destination.database.snowflake.keyFields != null)
-                                    config.destination.database.snowflake.keyFields.asScala.map(_.toLowerCase).toList.asJava
-                                else
-                                    null
-                            }
-                            config.destination.database.snowflake.copy(keyFields = fields)
-                        }
-                        else
-                            null
-                    }
-
-                    val redshift = {
-                        if(config.destination.database.redshift != null) {
-                            val fields = {
-                                if(config.destination.database.redshift.keyFields != null)
-                                    config.destination.database.redshift.keyFields.asScala.map(_.toLowerCase).toList.asJava
-                                else
-                                    null
-                            }
-                            config.destination.database.redshift.copy(keyFields = fields)
-                        }
-                        else
-                            null
-                    }
-
-                    (snowflake, redshift)
+                val fields = {
+                    if(config.destination.database.keyFields != null)
+                        config.destination.database.keyFields.asScala.map(_.toLowerCase).toList.asJava
+                    else
+                        null
                 }
-                config.destination.database.copy(snowflake = snowflake, redshift = redshift)
+                config.destination.database.copy(keyFields = fields)
             }
             else
                 null

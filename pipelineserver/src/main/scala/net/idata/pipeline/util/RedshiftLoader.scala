@@ -63,7 +63,7 @@ class RedshiftLoader(jobContext: JobContext) {
                 statement.execute("truncate table " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table)
             }
 
-            if(config.destination.database.redshift.keyFields != null)
+            if(config.destination.database.keyFields != null)
                 mergeInto(statement, secrets.dbRole, stageUrl)
             else
                 copyInto(statement, secrets.dbRole, stageUrl)
@@ -171,7 +171,7 @@ class RedshiftLoader(jobContext: JobContext) {
         val sql = new StringBuilder()
         val tableName = config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table
         sql.append("delete from " + tableName + " using " + tempTableName + " where ")
-        config.destination.database.redshift.keyFields.forEach(keyField => {
+        config.destination.database.keyFields.forEach(keyField => {
             sql.append(tableName + "." + keyField + " = " + tempTableName + "." + keyField + " and ")
         })
         sql.setLength(sql.length - 4)
@@ -213,9 +213,9 @@ class RedshiftLoader(jobContext: JobContext) {
         sql.setLength(sql.length - 2)
 
         // Keys?
-        if(config.destination.database.redshift.keyFields != null) {
+        if(config.destination.database.keyFields != null) {
             sql.append(", primary key (")
-            config.destination.database.redshift.keyFields.forEach(field => {
+            config.destination.database.keyFields.forEach(field => {
                 sql.append(field + ", ")
             })
             sql.setLength(sql.length - 2)

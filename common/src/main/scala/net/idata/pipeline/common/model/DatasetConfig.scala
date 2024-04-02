@@ -145,24 +145,21 @@ case class Database(
                        dbName: String, // Database name
                        schema: String,
                        table: String, // Table name
+                       keyFields: java.util.List[String],
                        manageTableManually: Boolean,
                        truncateBeforeWrite: Boolean,
+                       useSnowflake: Boolean,
+                       useRedshift: Boolean,
+                       usePostgres: Boolean,
                        snowflake: Snowflake,
-                       redshift: Redshift
+                       options: java.util.List[String]
                    )
 
 case class Snowflake(
                         warehouse: String,
-                        keyFields: java.util.List[String],
-                        formatTypeOptions: java.util.List[String],
                         sqlOverride: String,
                         createSemiStructuredFieldAs: String
                     )
-
-case class Redshift(
-                       keyFields: java.util.List[String],
-                       useJsonOptions: Boolean
-                   )
 
 case class CDCAttributes(
                             database: String,

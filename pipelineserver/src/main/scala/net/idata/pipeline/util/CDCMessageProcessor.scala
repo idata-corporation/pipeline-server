@@ -44,7 +44,7 @@ class CDCMessageProcessor {
                 ("objectStore", config, message)
             else if (config.destination.database != null && config.destination.database.snowflake != null)
                 ("snowflake", config, message)
-            else if (config.destination.database != null && config.destination.database.redshift != null)
+            else if (config.destination.database != null && config.destination.database.useRedshift)
                 ("redshift", config, message)
             else
                 throw new PipelineException("The proper destination is not set for the dataset " + config.name)

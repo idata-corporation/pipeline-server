@@ -128,7 +128,7 @@ class SnowflakeLoader(jobContext: JobContext) {
 
     private def useParquetStagingFile(): Boolean = {
         // If incoming CSV file and not a Snowflake MERGE INTO, true
-        config.source.fileAttributes.csvAttributes != null && config.destination.database.snowflake.keyFields == null
+        config.source.fileAttributes.csvAttributes != null && config.destination.database.keyFields == null
     }
 
     private def processFromStage(stageName: String, stageSuffix: String, statement: Statement): Unit = {
@@ -157,7 +157,7 @@ class SnowflakeLoader(jobContext: JobContext) {
                 // JSON or XML?
                 if(config.source.fileAttributes.jsonAttributes != null ||  config.source.fileAttributes.xmlAttributes != null)
                     buildCopy(stageName, stageSuffix)
-                else if(config.destination.database.snowflake.keyFields != null)
+                else if(config.destination.database.keyFields != null)
                     buildMerge(stageName, stageSuffix)
                 else
                     buildCopy(stageName, stageSuffix)
@@ -175,12 +175,12 @@ class SnowflakeLoader(jobContext: JobContext) {
         else if(config.source.fileAttributes.csvAttributes != null) {
             val sql = new StringBuilder()
 
-            if(config.destination.database.snowflake.keyFields == null) {
+            if(config.destination.database.keyFields == null) {
                 // Using a parquet file as input, create the parquet options
                 sql.append("create or replace file format pipelinefileformat type = 'parquet'")
 
                 // If there aren't any format type options, add SNAPPY as the file compression
-                if(config.destination.database.snowflake.formatTypeOptions == null)
+                if(config.destination.database.options == null)
                     sql.append(" compression = 'snappy'")
             }
             else {
@@ -195,8 +195,8 @@ class SnowflakeLoader(jobContext: JobContext) {
             }
 
             // Format options?
-            if(config.destination.database.snowflake.formatTypeOptions != null) {
-                config.destination.database.snowflake.formatTypeOptions.forEach(option => {
+            if(config.destination.database.options != null) {
+                config.destination.database.options.forEach(option => {
                     sql.append(" " + option)
                 })
             }
@@ -262,7 +262,7 @@ class SnowflakeLoader(jobContext: JobContext) {
         merge.append(" ON ")
 
         // Key(s)
-        config.destination.database.snowflake.keyFields.forEach(keyField => {
+        config.destination.database.keyFields.forEach(keyField => {
             merge.append(config.destination.database.table + "." + keyField + " = " + tempTable + "." + keyField + " AND ")
         })
         merge.setLength(merge.length -4)
@@ -296,7 +296,7 @@ class SnowflakeLoader(jobContext: JobContext) {
     }
 
     private def createFileFormat(): String = {
-        if(config.destination.database.snowflake.keyFields != null)
+        if(config.destination.database.keyFields != null)
             " (FILE_FORMAT => 'pipelinefileformat')"
         else
             " FILE_FORMAT = (FORMAT_NAME = 'pipelinefileformat')"
@@ -352,9 +352,9 @@ class SnowflakeLoader(jobContext: JobContext) {
         sql.setLength(sql.length - 2)
 
         // Keys?
-        if(config.destination.database.snowflake.keyFields != null) {
+        if(config.destination.database.keyFields != null) {
             sql.append(", primary key (")
-            config.destination.database.snowflake.keyFields.forEach(field => {
+            config.destination.database.keyFields.forEach(field => {
                 sql.append(field + ", ")
             })
             sql.setLength(sql.length - 2)
