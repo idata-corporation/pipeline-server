@@ -207,6 +207,12 @@ object DatasetValidatorUtil {
                 throw new PipelineException("If the 'destination.database' section is defined, the 'destination.database.schema' must be defined")
             if(config.destination.database.table == null)
                 throw new PipelineException("If the 'destination.database' section is defined, the 'destination.database.table' must be defined")
+            if(config.destination.database.keyFields != null) {
+                config.destination.database.keyFields.forEach(field => {
+                    if(!schemaFieldNames.contains(field))
+                        throw new PipelineException("Key field: " + field + " is not in the schema properties for this dataset")
+                })
+            }
 
             // Snowflake
             if(!config.destination.database.useSnowflake && !config.destination.database.useRedshift && !config.destination.database.usePostgres)
@@ -229,24 +235,12 @@ object DatasetValidatorUtil {
                     if(config.destination.database.keyFields != null)
                         throw new PipelineException("destination.database.keyFields are not supported for JSON or XML source files. You can place the JSON or XML in a column in a CSV file as an alternative.")
                 }
-                if(config.destination.database.keyFields != null) {
-                    config.destination.database.keyFields.forEach(field => {
-                        if(!schemaFieldNames.contains(field))
-                            throw new PipelineException("Key field: " + field + " is not in the schema properties for this dataset")
-                    })
-                }
             }
 
             // Redshift
             if(config.destination.database.useRedshift) {
                 if(config.source.fileAttributes != null && config.source.fileAttributes.xmlAttributes != null)
                     throw new PipelineException("Redshift does not support the ingestion of XML data")
-                if(config.destination.database.keyFields != null) {
-                    config.destination.database.keyFields.forEach(field => {
-                        if(!schemaFieldNames.contains(field))
-                            throw new PipelineException("Key field: " + field + " is not in the schema properties for this dataset")
-                    })
-                }
             }
         }
 
