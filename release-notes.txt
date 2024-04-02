@@ -259,3 +259,6 @@ v2.3.4
 02-28-2024 - Moved to a multi-module project and started to integrate Spark transformation ingestion code as an alternative to Athena ingestion
 03-01-2024 - Added CDC support to push changes into S3 parquet Apache Iceberg tables
 03-06-2024 - Added CDC support to push changes into a Redshift database
+
+v2.3.5
+04-02-2024 - Added support for Postgres DB as a destination, modifications to the DatasetConfig destination.database

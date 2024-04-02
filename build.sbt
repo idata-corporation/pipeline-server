@@ -1,7 +1,7 @@
 name := "pipeline-server"
 ThisBuild / organization := "net.idata"
 ThisBuild / scalaVersion := "2.12.12"
-ThisBuild / version := "2.3.4"
+ThisBuild / version := "2.3.5"
 
 lazy val global = project
     .in(file("."))

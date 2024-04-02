@@ -39,7 +39,7 @@ class VersionAPIController {
             logger.info("API endpoint GET /version called")
             APIKeyValidator.validate(apiKey)
             //val map = Map("version" -> BuildInfo.version).asJava
-            val map = Map("version" ->"2.2.5").asJava
+            val map = Map("version" ->"2.3.5").asJava
             val gson = new Gson
             new ResponseEntity[String](gson.toJson(map), HttpStatus.OK)
         }
