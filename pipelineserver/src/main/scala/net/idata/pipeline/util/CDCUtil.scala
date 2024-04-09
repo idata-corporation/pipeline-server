@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
 import net.idata.pipeline.common.util.ObjectStoreUtil
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.text.SimpleDateFormat
@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-    def insertCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def insertCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
         val columns = message.after.asScala.keys.toList
 
@@ -47,7 +47,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def updateCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def updateCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -74,7 +74,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def deleteCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def deleteCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -93,7 +93,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def createFile(config: DatasetConfig, messages: List[DebeziumMessage]): Unit = {
+    def createFile(config: DatasetConfig, messages: List[CDCMessage]): Unit = {
         val content = createFileInMemory(config, messages)
 
         // Determine the raw filename
@@ -108,7 +108,7 @@ object CDCUtil {
         ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(path), ObjectStoreUtil.getKey(path), content)
     }
 
-    private def createFileInMemory(config: DatasetConfig, messages: List[DebeziumMessage]): String = {
+    private def createFileInMemory(config: DatasetConfig, messages: List[CDCMessage]): String = {
         val delimiter = {
             if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes != null)
                 config.source.fileAttributes.csvAttributes.delimiter

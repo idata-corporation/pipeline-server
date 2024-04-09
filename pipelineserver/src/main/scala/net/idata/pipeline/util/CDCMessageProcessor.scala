@@ -22,13 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import com.google.common.base.Throwables
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.DatasetConfigIO
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
-class CDCMessageProcessor {
+class CDCMessageProcessor(messages: List[CDCMessage]) extends Runnable {
     private val logger: Logger = LoggerFactory.getLogger(classOf[CDCMessageProcessor])
 
-    def process(messages: List[DebeziumMessage]): Unit = {
+    def run(): Unit = {
         val configs = messages.map(message => {
             val datasetName = CDCMapperUtil.getDatasetName(message.databaseName, message.schemaName, message.tableName)
             val config = DatasetConfigIO.read(PipelineEnvironment.values.datasetTableName, datasetName)
@@ -55,7 +55,7 @@ class CDCMessageProcessor {
         }
     }
 
-    private def processGroup(groupOfMessages: List[(String, DatasetConfig, DebeziumMessage)]): Unit = {
+    private def processGroup(groupOfMessages: List[(String, DatasetConfig, CDCMessage)]): Unit = {
         try {
             val destination = groupOfMessages.head._1
             destination match {

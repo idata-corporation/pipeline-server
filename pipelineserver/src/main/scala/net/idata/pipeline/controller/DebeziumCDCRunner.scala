@@ -21,8 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import com.google.common.base.Throwables
 import com.google.gson.{Gson, GsonBuilder}
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.{NotificationUtil, QueueUtil}
+import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
+import net.idata.pipeline.util.CDCMessageProcessor
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -32,63 +33,63 @@ import java.util.regex.Pattern
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-class CDCConsumerRunner extends Runnable {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[CDCConsumerRunner])
+class DebeziumCDCRunner extends Runnable {
+    private val logger: Logger = LoggerFactory.getLogger(classOf[DebeziumCDCRunner])
 
     def run(): Unit = {
         try {
             val properties = new Properties()
-            properties.put("bootstrap.servers", PipelineEnvironment.values.kafkaBootstrapServer)
-            properties.put("group.id", PipelineEnvironment.values.kafkaGroupId)
+            properties.put("bootstrap.servers", PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaBootstrapServer)
+            properties.put("group.id", PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaGroupId)
             properties.put("key.deserializer", classOf[StringDeserializer])
             properties.put("value.deserializer", classOf[StringDeserializer])
 
             val consumer: Consumer[String, String] = new KafkaConsumer[String, String](properties)
-            val pattern = Pattern.compile(PipelineEnvironment.values.cdcDebeziumKafkaTopic + ".*")
+            val pattern = Pattern.compile(PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaTopic + ".*")
             consumer.subscribe(pattern)
-            val messageList = new ListBuffer[DebeziumMessage]()
+            val messageList = new ListBuffer[CDCMessage]()
             var messageListSize = 0
             while (true) {
-                val records: ConsumerRecords[String, String] = consumer.poll(PipelineEnvironment.values.kafkaTopicPollingInterval)
+                val records: ConsumerRecords[String, String] = consumer.poll(PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaTopicPollingInterval)
                 val messagesReceived: Boolean = records.count() > 0
-                if(messagesReceived)
+                if (messagesReceived)
                     logger.info("Kafka topic messages received: " + records.count().toString)
                 records.asScala.foreach(consumerRecord => {
                     //logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", value: " + consumerRecord.value())
 
-                    val debeziumMessage = parseMessage(PipelineEnvironment.values.cdcDebeziumKafkaTopic, consumerRecord.topic(), consumerRecord.value())
-                    if(debeziumMessage != null) {
+                    val cdcMessage = parseMessage(consumerRecord.topic(), consumerRecord.value())
+                    if (cdcMessage != null) {
                         // Determine the size of the message
                         val gson = new Gson()
-                        val debeziumMessageSize = gson.toJson(debeziumMessage).length
+                        val size = gson.toJson(cdcMessage).length
 
                         // The message list cannot exceed 255Kb, SNS limit is 256Kb
-                        if(debeziumMessageSize + messageListSize >= (255*1024)) {
-                            sendMessageList(messageList)
+                        if (size + messageListSize >= (255 * 1024)) {
+                            processMessages(messageList.toList)
                             messageList.clear()
-                            messageList += debeziumMessage
+                            messageList += cdcMessage
                         }
                         else
-                            messageList += debeziumMessage
-                        messageListSize = messageListSize + debeziumMessageSize
+                            messageList += cdcMessage
+                        messageListSize = messageListSize + size
                     }
                 })
 
-                if(messageList.nonEmpty) {
-                    sendMessageList(messageList)
+                if (messageList.nonEmpty) {
+                    processMessages(messageList.toList)
                     messageList.clear()
                 }
             }
         } catch {
             case e: Exception =>
-                throw new PipelineException("Pipeline Kafka error: " + Throwables.getStackTraceAsString(e))
+                throw new PipelineException("Pipeline DebeziumCDCRunner error: " + Throwables.getStackTraceAsString(e))
         }
     }
 
-    private def parseMessage(configuredTopic: String, topic: String, json: String): DebeziumMessage = {
+    private def parseMessage(topic: String, json: String): CDCMessage = {
         val gson = new Gson()
-        val message =  gson.fromJson(json, classOf[CDCMessage])
-        if(shouldProcess(message)) {
+        val message = gson.fromJson(json, classOf[DebeziumMessage])
+        if (shouldProcess(message)) {
             val before = {
                 if (message.before != null)
                     message.before
@@ -106,7 +107,7 @@ class CDCConsumerRunner extends Runnable {
             val isUpdate = before != null && after != null
             val isDelete = before != null && after == null
 
-            DebeziumMessage(
+            CDCMessage(
                 topic,
                 message.source.schema,
                 message.source.db,
@@ -121,12 +122,12 @@ class CDCConsumerRunner extends Runnable {
             null
     }
 
-    private def shouldProcess(message: CDCMessage): Boolean = {
-        if(message.tableChanges != null) {
+    private def shouldProcess(message: DebeziumMessage): Boolean = {
+        if (message.tableChanges != null) {
             logger.info("CDC message, table change received, ignore")
             false
         }
-        else if(message.before == null && message.after == null) {
+        else if (message.before == null && message.after == null) {
             logger.info("CDC message, before and after are null, ignore")
             false
         }
@@ -134,28 +135,30 @@ class CDCConsumerRunner extends Runnable {
             true
     }
 
-    private def sendMessageList(messageList: ListBuffer[DebeziumMessage]): Unit = {
+    private def processMessages(messages: List[CDCMessage]): Unit = {
+        if (PipelineEnvironment.values.cdcConfig.publishMessages)
+            publishMessages(messages)
+
+        if (PipelineEnvironment.values.cdcConfig.processMessages) {
+            val thread = new Thread(new CDCMessageProcessor(messages))
+            thread.start()
+        }
+    }
+
+    private def publishMessages(messages: List[CDCMessage]): Unit = {
         val gson = new GsonBuilder().disableHtmlEscaping().create()
 
-        // Add the message to the CDC Message Queue?
-        if(PipelineEnvironment.values.cdcMesssageQueue != null) {
-            val json = gson.toJson(messageList.asJava)
-            QueueUtil.addFifo(PipelineEnvironment.values.cdcMesssageQueue, json)
-        }
+        // Send notifications
+        messages.foreach(message => {
+            // Create the message attributes for the SNS filter policy
+            val attributes = new java.util.HashMap[String, String]
+            attributes.put("cdcTopic", message.topic)
+            attributes.put("schema", message.schemaName)
+            attributes.put("database", message.databaseName)
+            attributes.put("table", message.tableName)
 
-        // Send notifications?
-        if(PipelineEnvironment.values.cdcTopicArn != null) {
-            messageList.toList.foreach(debeziumMessage => {
-                // Create the message attributes for the SNS filter policy
-                val attributes = new java.util.HashMap[String, String]
-                attributes.put("cdcTopic", debeziumMessage.topic)
-                attributes.put("schema", debeziumMessage.schemaName)
-                attributes.put("database", debeziumMessage.databaseName)
-                attributes.put("table", debeziumMessage.tableName)
-
-                logger.info("Sending message for table: " + debeziumMessage.tableName + " to topic: " + PipelineEnvironment.values.cdcTopicArn)
-                NotificationUtil.addFifo(PipelineEnvironment.values.cdcTopicArn, gson.toJson(debeziumMessage), attributes.asScala.toMap)
-            })
-        }
+            logger.info("Sending message for table: " + message.tableName + " to topic: " + PipelineEnvironment.values.cdcConfig.publishSNSTopicArn)
+            NotificationUtil.addFifo(PipelineEnvironment.values.cdcConfig.publishSNSTopicArn, gson.toJson(message), attributes.asScala.toMap)
+        })
     }
 }

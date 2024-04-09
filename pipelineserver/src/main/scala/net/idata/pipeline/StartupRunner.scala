@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-import net.idata.pipeline.common.model.{CDCMessageThreshold, PipelineEnvironment}
+import net.idata.pipeline.common.model.{CDCConfig, CDCWriteMessageThreshold, DebeziumConfig, IDataCDCConfig, PipelineEnvironment}
 import net.idata.pipeline.common.util.NotificationUtil
-import net.idata.pipeline.controller.CDCConsumerRunner
+import net.idata.pipeline.controller.DebeziumCDCRunner
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
@@ -36,21 +36,6 @@ class StartupRunner extends ApplicationRunner {
 
     @Value("${useApiKeys}")
     var useApiKeys: Boolean = _
-
-    @Value("${cdc.enabled}")
-    var cdcEnabled: Boolean = _
-
-    @Value("${cdc.debezium.kafkaTopic}")
-    var cdcDebeziumKafkaTopic: String = _
-
-    @Value("${cdc.kafka.bootstrapServer}")
-    var cdcKafkaBootstrapServer: String = _
-
-    @Value("${cdc.kafka.groupId}")
-    var cdcKafkaGroupId: String = _
-
-    @Value("${cdc.kafka.topicPollingInterval}")
-    var cdcKafkaTopicPollingInterval: Int = _
 
     @Value("${aws.region}")
     var region: String = _
@@ -70,29 +55,53 @@ class StartupRunner extends ApplicationRunner {
     @Value("${aws.sns.sendDatasetNotifications}")
     var snsSendDatasetNotifications: Boolean = _
 
-    @Value("${aws.sns.sendCDCNotifications}")
-    var snsSendCDCNotifications: Boolean = _
-
-    @Value("${aws.sqs.sendCDCMessageQueue}")
-    var snsSendCDCMessageQueue: Boolean = _
-
     @Value("${aws.sqs.ttlFileNotifierQueueMessages}")
     var ttlFileNotifierQueueMessages: Int = _
 
-    @Value("${cdc.messageThreshold.objectStore}")
-    var cdcThresholdObjectStore: Int = _
+    @Value("${cdc.enabled}")
+    var cdcEnabled: Boolean = _
 
-    @Value("${cdc.messageThreshold.redshift}")
-    var cdcThresholdRedshift: Int = _
+    @Value("${cdc.processMessages.enabled}")
+    var cdcProcessMessagesEnabled: Boolean = _
 
-    @Value("${cdc.messageThreshold.snowflake}")
-    var cdcThresholdSnowflake: Int = _
+    @Value("${cdc.processMessages.datasetMapperTableName}")
+    var cdcDatasetMapperTableName: String = _
+
+    @Value("${cdc.publishMessages.enabled}")
+    var cdcPublishMessagesEnabled: Boolean = _
+
+    @Value("${cdc.publishMessages.sns.topicArn}")
+    var cdcPublishMessagesSNSTopicArn: String = _
+
+    @Value("${cdc.writeMessageThreshold.objectStore}")
+    var cdcWriteThresholdObjectStore: Int = _
+
+    @Value("${cdc.writeMessageThreshold.redshift}")
+    var cdcWriteThresholdRedshift: Int = _
+
+    @Value("${cdc.writeMessageThreshold.snowflake}")
+    var cdcWriteThresholdSnowflake: Int = _
+
+    @Value("${cdc.debezium.enabled}")
+    var debeziumEnabled: Boolean = _
+
+    @Value("${cdc.debezium.kafka.bootstrapServer}")
+    var debeziumKafkaBootstrapServer: String = _
+
+    @Value("${cdc.debezium.kafka.groupId}")
+    var debeziumKafkaGroupId: String = _
+
+    @Value("${cdc.debezium.kafka.topic}")
+    var debeziumKafkaTopic: String = _
+
+    @Value("${cdc.debezium.kafka.topicPollingInterval}")
+    var debeziumKafkaTopicPollingInterval: Int = _
 
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
-        if(cdcEnabled)
-            initKafkaConsumer()
+        if(cdcEnabled && debeziumEnabled)
+            initDebeziumRunner()
     }
 
     private def initPipelineEnvironment(): Unit = {
@@ -103,7 +112,6 @@ class StartupRunner extends ApplicationRunner {
         val datasetStatusTableName = environment + "-dataset-status"
         val fileNotifierMessageTableName = environment + "-file-notifier-message"
         val datasetPullTableName = environment + "-data-pull"
-        val cdcMapperTableName = environment + "-cdc-mapper"
 
         // Send SNS dataset notifications?
         val datasetTopicArn = {
@@ -113,57 +121,72 @@ class StartupRunner extends ApplicationRunner {
                 null
         }
 
-        val cdcTopicArn = {
-            if(snsSendCDCNotifications)
-                NotificationUtil.getTopicArn(environment + "-cdc-notification.fifo")
+        // CDC
+        //
+        val cdcWriteMessageThreshold = {
+            if(cdcEnabled) {
+                CDCWriteMessageThreshold(
+                    cdcWriteThresholdObjectStore,
+                    cdcWriteThresholdRedshift,
+                    cdcWriteThresholdSnowflake)
+            }
             else
                 null
         }
 
-        val cdcMessageQueue = {
-            if(snsSendCDCMessageQueue)
-                environment + "-cdc-message.fifo"
+        val debeziumConfig = {
+            if(cdcEnabled && debeziumEnabled) {
+                DebeziumConfig(
+                    debeziumKafkaBootstrapServer,
+                    debeziumKafkaGroupId,
+                    debeziumKafkaTopic,
+                    debeziumKafkaTopicPollingInterval)
+            }
             else
                 null
         }
 
-        val cdcMessageThreshold = CDCMessageThreshold(
-            cdcThresholdObjectStore,
-            cdcThresholdRedshift,
-            cdcThresholdSnowflake)
+        val cdcConfig = {
+            if(cdcEnabled) {
+                CDCConfig(
+                    cdcEnabled,
+                    cdcProcessMessagesEnabled,
+                    cdcPublishMessagesEnabled,
+                    cdcPublishMessagesSNSTopicArn,
+                    cdcWriteMessageThreshold,
+                    debeziumConfig,
+                    idataCDCConfig = null,
+                    cdcDatasetMapperTableName
+                )
+            }
+            else
+                null
+        }
 
         val pipelineEnvironment = PipelineEnvironment(
             environment,
             region,
             fileNotifierQueue,
             ttlFileNotifierQueueMessages,
-            cdcEnabled,
-            cdcMessageQueue,
             datasetTopicArn,
-            cdcTopicArn,
             datasetTableName,
             archivedMetadataTableName,
             datasetStatusTableName,
             fileNotifierMessageTableName,
             datasetPullTableName,
-            cdcMapperTableName,
             useApiKeys,
             apiKeysSecretName,
             snowflakeSecretName,
             redshiftSecretName,
             postgresSecretName,
-            cdcDebeziumKafkaTopic,
-            cdcKafkaBootstrapServer,
-            cdcKafkaGroupId,
-            cdcKafkaTopicPollingInterval,
-            cdcMessageThreshold
+            cdcConfig
         )
 
         PipelineEnvironment.init(pipelineEnvironment)
     }
 
-    private def initKafkaConsumer(): Unit = {
-        val thread = new Thread(new CDCConsumerRunner())
+    private def initDebeziumRunner(): Unit = {
+        val thread = new Thread(new DebeziumCDCRunner())
         thread.start()
     }
 }

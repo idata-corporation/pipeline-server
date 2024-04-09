@@ -27,20 +27,20 @@ object CDCMapperUtil {
 
         // Store the entry
         val key = cdcAttributes.database + "." + cdcAttributes.schema + cdcAttributes.table
-        NoSQLDbUtil.setItemNameValue(PipelineEnvironment.values.cdcMapperTableName, "name", key, "value", datasetName)
+        NoSQLDbUtil.setItemNameValue(PipelineEnvironment.values.cdcConfig.datasetMapperTableName, "name", key, "value", datasetName)
     }
 
     def deleteEntryIfExists(cdcAttributes: CDCAttributes): Unit = {
         val key = cdcAttributes.database + "." + cdcAttributes.schema + cdcAttributes.table
 
         // Make sure an entry already exists for the key
-        val existing = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.cdcMapperTableName, "name", key, "value").orNull
+        val existing = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.cdcConfig.datasetMapperTableName, "name", key, "value").orNull
         if(existing != null)
-            NoSQLDbUtil.deleteItemJSON(PipelineEnvironment.values.cdcMapperTableName, "name", key)
+            NoSQLDbUtil.deleteItemJSON(PipelineEnvironment.values.cdcConfig.datasetMapperTableName, "name", key)
     }
 
     def getDatasetName(database: String, schema: String, table: String): String = {
         val key = database + "." + schema + "." + table
-        NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.cdcMapperTableName, "name", key, "value").orNull
+        NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.cdcConfig.datasetMapperTableName, "name", key, "value").orNull
     }
 }

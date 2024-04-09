@@ -19,19 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 case class CDCMessage(
-                         source: Source,
-                         databaseName: String,
+                         topic: String,
                          schemaName: String,
-                         tableChanges: java.util.ArrayList[java.util.Map[String, Object]],
+                         databaseName: String,
+                         tableName: String,
+                         isInsert: Boolean,
+                         isUpdate: Boolean,
+                         isDelete: Boolean,
                          before: java.util.Map[String, String],
-                         after: java.util.Map[String, String]
+                         after: java.util.Map[String, String],
                      )
-
-case class Source(
-                     version: String,
-                     connector: String,
-                     name: String,
-                     db: String,
-                     schema: String,
-                     table: String
-                 )
