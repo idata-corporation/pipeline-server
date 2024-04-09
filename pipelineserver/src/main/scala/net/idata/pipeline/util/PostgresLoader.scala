@@ -91,7 +91,7 @@ class PostgresLoader(jobContext: JobContext) {
             createTableIfUndefined(statement, config.destination.database.table)
 
         val sql = new StringBuilder()
-        sql.append("COPY " + config.destination.database.dbName + "." + config.destination.database.schema + "." + config.destination.database.table + " FROM STDIN (")
+        sql.append("COPY " + "\"" + config.destination.database.dbName + "\"" + "." + config.destination.database.schema + "." + "\"" + config.destination.database.table + "\"" + " FROM STDIN (")
 
         // Append the options (i.e. DELIMITER ',', FORMAT csv, etc)
         if(config.destination.database.options != null) {
