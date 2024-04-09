@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.{CDCConfig, CDCWriteMessageThreshold, DebeziumConfig, IDataCDCConfig, PipelineEnvironment}
 import net.idata.pipeline.common.util.NotificationUtil
-import net.idata.pipeline.controller.DebeziumCDCRunner
+import net.idata.pipeline.controller.{DebeziumCDCRunner, IDataCDCRunner}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
@@ -97,11 +97,31 @@ class StartupRunner extends ApplicationRunner {
     @Value("${cdc.debezium.kafka.topicPollingInterval}")
     var debeziumKafkaTopicPollingInterval: Int = _
 
+    @Value("${cdc.idata.enabled}")
+    var idataCDCEnabled: Boolean = _
+
+    @Value("${cdc.idata.database.type}")
+    var idataCDCDatabaseType: String = _
+
+    @Value("${cdc.idata.database.name}")
+    var idataCDCDatabaseName: String = _
+
+    @Value("${cdc.idata.database.secretName}")
+    var idataCDCDatabaseSecretName: String = _
+
+    @Value("${cdc.idata.database.includeTables}")
+    var idataCDCDatabaseIncludeTables: java.util.ArrayList[String] = _
+
+    @Value("${cdc.idata.pollingInterval}")
+    var idataCDCPollingInterval: Int = _
+
     @Override
     def run(args: ApplicationArguments): Unit =  {
         initPipelineEnvironment()
         if(cdcEnabled && debeziumEnabled)
-            initDebeziumRunner()
+            initDebeziumCDCRunner()
+        if(cdcEnabled && idataCDCEnabled)
+            initIDataCDCRunner()
     }
 
     private def initPipelineEnvironment(): Unit = {
@@ -112,6 +132,7 @@ class StartupRunner extends ApplicationRunner {
         val datasetStatusTableName = environment + "-dataset-status"
         val fileNotifierMessageTableName = environment + "-file-notifier-message"
         val datasetPullTableName = environment + "-data-pull"
+        val cdcLastReadTableName = environment + "-cdc-last-read"
 
         // Send SNS dataset notifications?
         val datasetTopicArn = {
@@ -146,6 +167,22 @@ class StartupRunner extends ApplicationRunner {
                 null
         }
 
+        val idataCDCConfig = {
+            if(cdcEnabled && idataCDCEnabled) {
+                IDataCDCConfig(
+                    idataCDCEnabled,
+                    idataCDCDatabaseType,
+                    idataCDCDatabaseSecretName,
+                    idataCDCDatabaseName,
+                    idataCDCDatabaseIncludeTables,
+                    idataCDCPollingInterval,
+                    cdcLastReadTableName
+                )
+            }
+            else
+                null
+        }
+
         val cdcConfig = {
             if(cdcEnabled) {
                 CDCConfig(
@@ -155,7 +192,7 @@ class StartupRunner extends ApplicationRunner {
                     cdcPublishMessagesSNSTopicArn,
                     cdcWriteMessageThreshold,
                     debeziumConfig,
-                    idataCDCConfig = null,
+                    idataCDCConfig,
                     cdcDatasetMapperTableName
                 )
             }
@@ -185,8 +222,13 @@ class StartupRunner extends ApplicationRunner {
         PipelineEnvironment.init(pipelineEnvironment)
     }
 
-    private def initDebeziumRunner(): Unit = {
+    private def initDebeziumCDCRunner(): Unit = {
         val thread = new Thread(new DebeziumCDCRunner())
+        thread.start()
+    }
+
+    private def initIDataCDCRunner(): Unit = {
+        val thread = new Thread(new IDataCDCRunner())
         thread.start()
     }
 }

@@ -21,7 +21,7 @@ schedule:
 environment: idata-poc
 useApiKeys: "false"
 cdc:
-  enabled: "false"
+  enabled: "true"
   publishMessages:
     enabled: "false"
     sns:
@@ -42,13 +42,13 @@ cdc:
       topicPollingInterval: "1000"
   idata:
     enabled: "true"
-    type: mssql
     database:
-      secretName: secret_here
-      dbName: Billing
+      type: mssql
+      name: testdb
+      secretName: idata-poc-mssql
       includeTables:
         - dbo_BillingRecords_New
-    pollingInterval: "5000"
+    pollingInterval: "60000"
     lastReadTableName: idata-poc-cdc-last-read
 aws:
   region: us-east-1
