@@ -23,7 +23,7 @@ import com.google.gson.{Gson, GsonBuilder}
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
-import net.idata.pipeline.util.CDCMessageProcessor
+import net.idata.pipeline.util.{CDCMessageProcessor, CDCUtil}
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -57,7 +57,7 @@ class DebeziumCDCRunner extends Runnable {
                 records.asScala.foreach(consumerRecord => {
                     //logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", value: " + consumerRecord.value())
 
-                    val cdcMessage = parseMessage(consumerRecord.topic(), consumerRecord.value())
+                    val cdcMessage = parseMessage(consumerRecord.value())
                     if (cdcMessage != null) {
                         // Determine the size of the message
                         val gson = new Gson()
@@ -65,7 +65,7 @@ class DebeziumCDCRunner extends Runnable {
 
                         // The message list cannot exceed 255Kb, SNS limit is 256Kb
                         if (size + messageListSize >= (255 * 1024)) {
-                            processMessages(messageList.toList)
+                            CDCUtil.processMessages(messageList.toList)
                             messageList.clear()
                             messageList += cdcMessage
                         }
@@ -76,7 +76,7 @@ class DebeziumCDCRunner extends Runnable {
                 })
 
                 if (messageList.nonEmpty) {
-                    processMessages(messageList.toList)
+                    CDCUtil.processMessages(messageList.toList)
                     messageList.clear()
                 }
             }
@@ -86,7 +86,7 @@ class DebeziumCDCRunner extends Runnable {
         }
     }
 
-    private def parseMessage(topic: String, json: String): CDCMessage = {
+    private def parseMessage(json: String): CDCMessage = {
         val gson = new Gson()
         val message = gson.fromJson(json, classOf[DebeziumMessage])
         if (shouldProcess(message)) {
@@ -108,9 +108,8 @@ class DebeziumCDCRunner extends Runnable {
             val isDelete = before != null && after == null
 
             CDCMessage(
-                topic,
-                message.source.schema,
                 message.source.db,
+                message.source.schema,
                 message.source.table,
                 isInsert,
                 isUpdate,
@@ -133,32 +132,5 @@ class DebeziumCDCRunner extends Runnable {
         }
         else
             true
-    }
-
-    private def processMessages(messages: List[CDCMessage]): Unit = {
-        if (PipelineEnvironment.values.cdcConfig.publishMessages)
-            publishMessages(messages)
-
-        if (PipelineEnvironment.values.cdcConfig.processMessages) {
-            val thread = new Thread(new CDCMessageProcessor(messages))
-            thread.start()
-        }
-    }
-
-    private def publishMessages(messages: List[CDCMessage]): Unit = {
-        val gson = new GsonBuilder().disableHtmlEscaping().create()
-
-        // Send notifications
-        messages.foreach(message => {
-            // Create the message attributes for the SNS filter policy
-            val attributes = new java.util.HashMap[String, String]
-            attributes.put("cdcTopic", message.topic)
-            attributes.put("schema", message.schemaName)
-            attributes.put("database", message.databaseName)
-            attributes.put("table", message.tableName)
-
-            logger.info("Sending message for table: " + message.tableName + " to topic: " + PipelineEnvironment.values.cdcConfig.publishSNSTopicArn)
-            NotificationUtil.addFifo(PipelineEnvironment.values.cdcConfig.publishSNSTopicArn, gson.toJson(message), attributes.asScala.toMap)
-        })
     }
 }

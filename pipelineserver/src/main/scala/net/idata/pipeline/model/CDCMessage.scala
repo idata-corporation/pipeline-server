@@ -19,9 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 case class CDCMessage(
-                         topic: String,
-                         schemaName: String,
                          databaseName: String,
+                         schemaName: String,
                          tableName: String,
                          isInsert: Boolean,
                          isUpdate: Boolean,

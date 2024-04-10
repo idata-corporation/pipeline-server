@@ -18,8 +18,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+import com.google.gson.GsonBuilder
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
-import net.idata.pipeline.common.util.ObjectStoreUtil
+import net.idata.pipeline.common.util.{NotificationUtil, ObjectStoreUtil}
 import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -29,6 +30,16 @@ import scala.collection.JavaConverters._
 
 object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
+
+    def processMessages(messages: List[CDCMessage]): Unit = {
+        if (PipelineEnvironment.values.cdcConfig.publishMessages)
+            publishMessages(messages)
+
+        if (PipelineEnvironment.values.cdcConfig.processMessages) {
+            val thread = new Thread(new CDCMessageProcessor(messages))
+            thread.start()
+        }
+    }
 
     def insertCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
@@ -106,6 +117,22 @@ object CDCUtil {
         val path = "s3://" + PipelineEnvironment.values.environment + "-raw/temp/" + config.name + "/" + rawFilename
         logger.info("Creating file in the raw bucket: " + path)
         ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(path), ObjectStoreUtil.getKey(path), content)
+    }
+
+    private def publishMessages(messages: List[CDCMessage]): Unit = {
+        val gson = new GsonBuilder().disableHtmlEscaping().create()
+
+        // Send notifications
+        messages.foreach(message => {
+            // Create the message attributes for the SNS filter policy
+            val attributes = new java.util.HashMap[String, String]
+            attributes.put("schema", message.schemaName)
+            attributes.put("database", message.databaseName)
+            attributes.put("table", message.tableName)
+
+            logger.info("Sending message for table: " + message.tableName + " to topic: " + PipelineEnvironment.values.cdcConfig.publishSNSTopicArn)
+            NotificationUtil.addFifo(PipelineEnvironment.values.cdcConfig.publishSNSTopicArn, gson.toJson(message), attributes.asScala.toMap)
+        })
     }
 
     private def createFileInMemory(config: DatasetConfig, messages: List[CDCMessage]): String = {
