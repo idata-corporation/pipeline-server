@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-import net.idata.pipeline.common.model.{CDCConfig, CDCWriteMessageThreshold, DebeziumConfig, IDataCDCConfig, PipelineEnvironment}
+import net.idata.pipeline.common.model._
 import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.controller.{DebeziumCDCRunner, IDataCDCRunner}
 import org.slf4j.{Logger, LoggerFactory}

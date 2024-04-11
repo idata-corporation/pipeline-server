@@ -46,8 +46,8 @@ cdc:
       type: mssql
       name: testdb
       secretName: idata-poc-mssql
-      includeTables: dbo.BillingRecords_New
-    pollingInterval: "60000"
+      includeTables: dbo.people
+    pollingInterval: "10000"
 aws:
   region: us-east-1
   secretsManager:

@@ -19,11 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 import com.google.common.base.Throwables
-import com.google.gson.{Gson, GsonBuilder}
+import com.google.gson.Gson
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
-import net.idata.pipeline.util.{CDCMessageProcessor, CDCUtil}
+import net.idata.pipeline.util.CDCUtil
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
