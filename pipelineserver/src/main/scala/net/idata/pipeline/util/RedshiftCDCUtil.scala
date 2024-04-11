@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.{Connection, DriverManager}
@@ -28,11 +28,11 @@ import java.util.Properties
 class RedshiftCDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(classOf[RedshiftCDCUtil])
 
-    def process(groupOfMessages: List[(String, DatasetConfig, DebeziumMessage)]): Unit = {
+    def process(groupOfMessages: List[(String, DatasetConfig, CDCMessage)]): Unit = {
         val containsDeletes = groupOfMessages.find(_._3.isDelete == true)
 
         // If the number of messages is less than the threshold or there are deletes, use JDBC to process
-        if (groupOfMessages.length < PipelineEnvironment.values.cdcMessageThreshold.redshift || containsDeletes.isDefined) {
+        if (groupOfMessages.length < PipelineEnvironment.values.cdcConfig.writeMessageThreshold.redshift || containsDeletes.isDefined) {
             val sql = groupOfMessages.map { case (_, config, message) =>
                 if (message.isInsert)
                     CDCUtil.insertCreateSQL(config, message)

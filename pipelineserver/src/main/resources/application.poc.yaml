@@ -18,21 +18,36 @@ schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"
   checkDatabaseSourceQueries: "30000"
-  checkCDCMessageQueue: "10000"
 environment: idata-poc
 useApiKeys: "false"
 cdc:
-  enabled: "false"
-  kafka:
-    bootstrapServer: b-2.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
-    groupId: idata-group
-    topicPollingInterval: "1000"
-  debezium:
-    kafkaTopic: testdb-topic
-  messageThreshold:
+  enabled: "true"
+  publishMessages:
+    enabled: "false"
+    sns:
+      topicArn: na
+  processMessages:
+    enabled: "false"
+    datasetMapperTableName: idata-poc-cdc-mapper
+  writeMessageThreshold: # The threshold of messages received before the pipeline will create a file to process, instead of calling JDBC directly
     objectStore: "10"
     redshift: "30"
     snowflake: "30"
+  debezium:
+    enabled: "false"
+    kafka:
+      bootstrapServer: b-2.kafkadebezium.7zbc63.c25.kafka.us-east-1.amazonaws.com:9092
+      groupId: idata-group
+      topic: testdb-topic
+      topicPollingInterval: "1000"
+  idata:
+    enabled: "true"
+    database:
+      type: mssql
+      name: testdb
+      secretName: idata-poc-mssql
+      includeTables: dbo.people
+    pollingInterval: "10000"
 aws:
   region: us-east-1
   secretsManager:
@@ -42,7 +57,5 @@ aws:
     postgresSecretName: idata-poc-postgres
   sns:
     sendDatasetNotifications: "true"
-    sendCDCNotifications: "false"
   sqs:
     ttlFileNotifierQueueMessages: "60"
-    sendCDCMessageQueue: "false"

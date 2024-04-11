@@ -18,9 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+import com.google.gson.GsonBuilder
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
-import net.idata.pipeline.common.util.ObjectStoreUtil
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.common.util.{NotificationUtil, ObjectStoreUtil}
+import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.text.SimpleDateFormat
@@ -30,7 +31,17 @@ import scala.collection.JavaConverters._
 object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-    def insertCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def processMessages(messages: List[CDCMessage]): Unit = {
+        if (PipelineEnvironment.values.cdcConfig.publishMessages)
+            publishMessages(messages)
+
+        if (PipelineEnvironment.values.cdcConfig.processMessages) {
+            val thread = new Thread(new CDCMessageProcessor(messages))
+            thread.start()
+        }
+    }
+
+    def insertCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
         val columns = message.after.asScala.keys.toList
 
@@ -47,7 +58,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def updateCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def updateCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -74,7 +85,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def deleteCreateSQL(config: DatasetConfig, message: DebeziumMessage): String = {
+    def deleteCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
 
         if(config.destination.objectStore != null)
@@ -93,7 +104,7 @@ object CDCUtil {
         sql.toString
     }
 
-    def createFile(config: DatasetConfig, messages: List[DebeziumMessage]): Unit = {
+    def createFile(config: DatasetConfig, messages: List[CDCMessage]): Unit = {
         val content = createFileInMemory(config, messages)
 
         // Determine the raw filename
@@ -108,7 +119,23 @@ object CDCUtil {
         ObjectStoreUtil.writeBucketObject(ObjectStoreUtil.getBucket(path), ObjectStoreUtil.getKey(path), content)
     }
 
-    private def createFileInMemory(config: DatasetConfig, messages: List[DebeziumMessage]): String = {
+    private def publishMessages(messages: List[CDCMessage]): Unit = {
+        val gson = new GsonBuilder().disableHtmlEscaping().create()
+
+        // Send notifications
+        messages.foreach(message => {
+            // Create the message attributes for the SNS filter policy
+            val attributes = new java.util.HashMap[String, String]
+            attributes.put("schema", message.schemaName)
+            attributes.put("database", message.databaseName)
+            attributes.put("table", message.tableName)
+
+            logger.info("Sending message for table: " + message.tableName + " to topic: " + PipelineEnvironment.values.cdcConfig.publishSNSTopicArn)
+            NotificationUtil.addFifo(PipelineEnvironment.values.cdcConfig.publishSNSTopicArn, gson.toJson(message), attributes.asScala.toMap)
+        })
+    }
+
+    private def createFileInMemory(config: DatasetConfig, messages: List[CDCMessage]): String = {
         val delimiter = {
             if(config.source.fileAttributes != null && config.source.fileAttributes.csvAttributes != null)
                 config.source.fileAttributes.csvAttributes.delimiter

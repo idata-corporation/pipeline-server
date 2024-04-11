@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.{GuidV5, ObjectStoreSQLUtil}
-import net.idata.pipeline.model.DebeziumMessage
+import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
@@ -29,7 +29,7 @@ import java.time.Instant
 class ObjectStoreCDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(classOf[ObjectStoreCDCUtil])
 
-    def process(groupOfMessages: List[(String, DatasetConfig, DebeziumMessage)]): Unit = {
+    def process(groupOfMessages: List[(String, DatasetConfig, CDCMessage)]): Unit = {
         val config = groupOfMessages.head._2
         val containsDeletes = groupOfMessages.find(_._3.isDelete == true)
 
@@ -37,7 +37,7 @@ class ObjectStoreCDCUtil {
             throw new PipelineException("CDC 'deletes' cannot be written to non Apache Iceberg formatted parquet files")
 
         // If the number of messages is less than the threshold or there are deletes, use JDBC to process
-        if (groupOfMessages.length < PipelineEnvironment.values.cdcMessageThreshold.objectStore || containsDeletes.isDefined) {
+        if (groupOfMessages.length < PipelineEnvironment.values.cdcConfig.writeMessageThreshold.objectStore || containsDeletes.isDefined) {
             val sqlList = groupOfMessages.map { case (_, config, message) =>
                 if (message.isInsert)
                     CDCUtil.insertCreateSQL(config, message)

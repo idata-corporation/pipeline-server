@@ -47,8 +47,6 @@ class DynamoDbUtil(dynamoDB: DynamoDB, amazonDynamoDb: AmazonDynamoDB) extends N
     override def setItemNameValue(tableName: String, keyName: String, key: String, valueName: String, value: String): Unit = {
         val table = dynamoDB.getTable(tableName)
 
-        import com.amazonaws.services.dynamodbv2.document.Item
-
         val item = new Item()
             .withPrimaryKey(keyName, key)
             .withString(valueName, value)

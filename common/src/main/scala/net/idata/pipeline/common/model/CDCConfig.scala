@@ -20,8 +20,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Message threshold values are used to determine when writing to the data store, if faster to write data to
 // a file rather than use JDBC directly to store the data
-case class CDCMessageThreshold(
-                                  objectStore: Int,
-                                  redshift: Int,
-                                  snowflake: Int
-                              )
+
+
+case class CDCConfig(
+                        enabled: Boolean,
+                        processMessages: Boolean,
+                        publishMessages: Boolean,
+                        publishSNSTopicArn: String,
+                        writeMessageThreshold: CDCWriteMessageThreshold,
+                        debeziumConfig: DebeziumConfig,
+                        idataCDCConfig: IDataCDCConfig,
+                        datasetMapperTableName: String
+                    )
+case class CDCWriteMessageThreshold(
+                                       objectStore: Int,
+                                       redshift: Int,
+                                       snowflake: Int
+                                   )
