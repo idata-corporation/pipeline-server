@@ -237,7 +237,6 @@ class IDataCDCRunner extends Runnable {
         val jdbcUrl = secrets.get("jdbcUrl")
 
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
-        logger.info("class loaded: com.microsoft.sqlserver.jdbc.SQLServerDriver")
         DriverManager.getConnection(jdbcUrl, username, password)
     }
 }
