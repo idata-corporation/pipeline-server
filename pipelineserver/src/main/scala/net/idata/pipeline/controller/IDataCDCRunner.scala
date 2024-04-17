@@ -126,7 +126,7 @@ class IDataCDCRunner extends Runnable {
 
                     val cdcMessages = processTable(connection, database, schema, realTable)
 
-                    if(PipelineEnvironment.values.cdcConfig.publishMessages)
+                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages)
                         CDCUtil.processMessages(cdcMessages)
                 }
                 catch {

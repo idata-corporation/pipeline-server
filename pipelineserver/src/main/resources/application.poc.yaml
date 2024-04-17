@@ -23,9 +23,9 @@ useApiKeys: "false"
 cdc:
   enabled: "true"
   publishMessages:
-    enabled: "false"
+    enabled: "true"
     sns:
-      topicArn: na
+      topicArn: arn:aws:sns:us-east-1:116279234263:idata-poc-cdc-notification.fifo
   processMessages:
     enabled: "false"
     datasetMapperTableName: idata-poc-cdc-mapper
