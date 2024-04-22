@@ -21,8 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import com.amazonaws.services.sns.model.{MessageAttributeValue, PublishRequest, PublishResult, SubscribeRequest}
 import com.amazonaws.services.sns.{AmazonSNS, AmazonSNSClientBuilder}
 import net.idata.pipeline.common.model.{PipelineException, Subscription}
-import net.idata.pipeline.common.util.NotificationUtility
+import net.idata.pipeline.common.util.{GuidV5, NotificationUtility}
 
+import java.time.Instant
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -62,10 +63,16 @@ class SNSUtil(val sns: AmazonSNS) extends NotificationUtility {
             (name, messageAttribute)
         }.asJava
 
-        val messageGroupId: String = "pipeline-message-group"  // The pipeline does not require individual message groups
+        // The pipeline does not require individual message groups
+        val messageGroupId: String = "pipeline-message-group"
+
+        // FIFO topics must use a unique message deduplication ID
+        val messageDedupId: String = "pipeline-dedup-" + GuidV5.nameUUIDFrom(Instant.now.toEpochMilli.toString).toString
+
         val publishRequest = new PublishRequest()
             .withMessageGroupId(messageGroupId)
             .withTopicArn(topicArn)
+            .withMessageDeduplicationId(messageDedupId)
             .withMessage(json)
             .withMessageAttributes(messageAttributeMap)
 
