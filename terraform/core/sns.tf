@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "dataset_notification_policy" {
 resource "aws_sns_topic" "cdc_notification" {
   name = "${var.environment_name}-cdc-notification.fifo"
   fifo_topic                  = true
-  content_based_deduplication = true
+  content_based_deduplication = false
 }
 
 resource "aws_sns_topic_policy" "cdc_notification" {
