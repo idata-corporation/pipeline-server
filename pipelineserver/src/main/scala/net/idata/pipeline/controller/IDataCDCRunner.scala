@@ -75,7 +75,7 @@ class IDataCDCRunner extends Runnable {
             sql.append("DECLARE @date DATETIME = CONVERT(DATETIME, @start_time); ")
             sql.append("SET @from_lsn = sys.fn_cdc_map_time_to_lsn('smallest greater than', @date); ")
             sql.append("SET @to_lsn = sys.fn_cdc_get_max_lsn(); ")
-            sql.append("SELECT * FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, N'all'); ")
+            sql.append("SELECT * FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, N'all update old'); ")
             sql.append("END")
             logger.info("CREATE OR ALTER stored proc: " + "sp_get_all_cdc_changes_" + tableWithSchema)
             createStoredProc(connection, sql.toString)
@@ -87,7 +87,7 @@ class IDataCDCRunner extends Runnable {
             sql.append("DECLARE @max_lsn binary(10); ")
             sql.append("SET @from_lsn = sys.fn_cdc_get_min_lsn ('" + tableWithSchema + "') ")
             sql.append("SET @to_lsn = sys.fn_cdc_get_max_lsn(); ")
-            sql.append("SELECT @max_lsn = MAX(__$start_lsn) FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, 'all'); ")
+            sql.append("SELECT @max_lsn = MAX(__$start_lsn) FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, 'all update old'); ")
             sql.append("SELECT sys.fn_cdc_map_lsn_to_time(@max_lsn); ")
             sql.append("END")
             logger.info("CREATE OR ALTER stored proc: " + "sp_get_next_lsn_as_date_" + tableWithSchema)
@@ -156,49 +156,79 @@ class IDataCDCRunner extends Runnable {
 
         // Convert to CDCMessages
         val results = SQLUtil.getResultSet(resultSet)
-        val messages = results.map(result => {
+        val messages = results.flatMap(result => {
             val operation = result.get("__$operation").orNull
             if(operation == null)
                 throw new PipelineException("Internal error: CDC value does not have an '__$operation' column")
 
-            val (isInsert, isUpdate, isDelete) = {
-                 if(operation.toInt == 2)
-                     (true, false, false)
-                 else if(operation.toInt == 4)
-                     (false, true, false)
+            val (isBeforeUpdate, isAfterUpdate, isInsert, isDelete) = {
+                if(operation.toInt == 4)
+                    (false, true, false, false)
+                else if(operation.toInt == 3)
+                     (true, false, false, false)
+                 else if(operation.toInt == 2)
+                     (false, false, true, false)
                  else if(operation.toInt == 1)
-                     (false, false, true)
+                     (false, false, false, true)
                  else
-                     throw new PipelineException("Internal CDC error, invalid operation value recieved: " + operation + " for table: " + tableWithSchema)
+                     throw new PipelineException("Internal CDC error, invalid operation value received: " + operation + " for table: " + tableWithSchema)
             }
 
-            // Strip out the system fields
-            val data = result.filterNot(_._1.startsWith("__$"))
+            if(isAfterUpdate)
+                None  // Ignore the 'after' values, already taken care of with the 'isBeforeUpdate'
+            else {
+                val (before, after) = {
+                    // Filter out the system fields
+                    val data = result.filterNot(_._1.startsWith("__$"))
 
-            val (before, after) = {
-                if(isUpdate || isInsert)
-                    (null, data.asJava)
-                else
-                    (data.asJava, null)
+                    if(isBeforeUpdate) {
+                        // The current record is the 'before'
+                        val before = data
+
+                        // Find the 'after' record
+                        val seqval = result.get("__$seqval").orNull
+                        val after = findAfter(seqval, results)
+                        (before.asJava, after.asJava)
+                    }
+                    else {
+                        if(isInsert)
+                            (null, data.asJava)
+                        else
+                            (data.asJava, null)
+                    }
+                }
+
+                val cdcMessage = CDCMessage(
+                    database,
+                    schema,
+                    table,
+                    isInsert,
+                    isBeforeUpdate,
+                    isDelete,
+                    before,
+                    after
+                )
+                logger.info("CDC Message Received: " + cdcMessage.toString)
+                Some(cdcMessage)
             }
-
-            val cdcMessage = CDCMessage(
-                database,
-                schema,
-                table,
-                isInsert,
-                isUpdate,
-                isDelete,
-                before,
-                after
-            )
-            logger.info("CDC Message Received: " + cdcMessage.toString)
-            cdcMessage
         })
 
         storeNextLSNForProc(connection, database, tableWithSchema)
 
         messages
+    }
+
+    private def findAfter(seqval: String, results: List[Map[String, String]]): Map[String, String] = {
+        // In the result set, find the 'after' value with a matching 'seqval' and operation of 4
+        val after = results.flatMap(r => {
+            if(r.getOrElse("__$seqval", "").compareTo(seqval) == 0 && r.getOrElse("__$operation", "").compareTo("4").toInt == 0)
+                Some(r)
+            else
+                None
+        }).flatten.toMap
+
+        // Filter out the system fields
+        after.filterNot(_._1.startsWith("__$"))
     }
 
     private def getLSNForProc(database: String, table: String): String = {
