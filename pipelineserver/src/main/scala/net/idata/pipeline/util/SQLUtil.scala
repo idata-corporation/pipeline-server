@@ -36,28 +36,31 @@ object SQLUtil {
                     val dataType = metaData.getColumnType(index)
                     val value = dataType match {
                         case Types.BOOLEAN | Types.BIT =>
-                            resultSet.getBoolean(index).toString
+                            convertIfNull(resultSet.getBoolean(index))
                         case Types.TINYINT | Types.SMALLINT | Types.INTEGER =>
-                            resultSet.getInt(index).toString
+                            convertIfNull(resultSet.getInt(index))
                         case Types.BIGINT =>
-                            resultSet.getLong(index).toString
+                            convertIfNull(resultSet.getLong(index))
                         case Types.NUMERIC | Types.DECIMAL =>
-                            val value = resultSet.getBigDecimal(index).toString
-                            BigDecimal(value).toInt.toString    // Remove scientific notation
+                            val value = convertIfNull(resultSet.getBigDecimal(index))
+                            if(value.isBlank)
+                                value
+                            else
+                                BigDecimal(value).toInt.toString    // Remove scientific notation
                         case Types.REAL =>
-                            resultSet.getFloat(index).toString
+                            convertIfNull(resultSet.getFloat(index))
                         case Types.FLOAT | Types.DOUBLE =>
-                            resultSet.getDouble(index).toString
+                            convertIfNull(resultSet.getDouble(index))
                         case Types.TIME | Types.TIME_WITH_TIMEZONE =>
-                            resultSet.getTime(index).toString
+                            convertIfNull(resultSet.getTime(index))
                         case Types.TIMESTAMP | Types.TIMESTAMP_WITH_TIMEZONE =>
-                            resultSet.getTimestamp(index).toString
+                            convertIfNull(resultSet.getTimestamp(index))
                         case Types.DATE =>
-                            resultSet.getDate(index).toString
+                            convertIfNull(resultSet.getDate(index))
                         case Types.CHAR | Types.VARCHAR | Types.LONGVARCHAR =>
-                            resultSet.getString(index)
+                            convertIfNull(resultSet.getString(index))
                         case _ =>
-                            resultSet.getString(index)
+                            convertIfNull(resultSet.getString(index))
                     }
                     (name, value)
                 }).toMap
@@ -70,8 +73,16 @@ object SQLUtil {
                 // MSSQL Server CDC bug, ignore this error
                 if (e.getMessage.startsWith("An insufficient number of arguments were supplied for the procedure or function cdc.fn_cdc_get_all_changes_"))
                     List[Map[String, String]]()
+
                 else
                     throw e
         }
+    }
+
+    private def convertIfNull(value: Any): String = {
+        if(value == null)
+            ""
+        else
+            value.toString
     }
 }
