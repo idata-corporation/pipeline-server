@@ -112,6 +112,7 @@ class DataPuller {
             val resultSetMetadata = resultSet.getMetaData
             while(resultSet.next()) {
                 val row = (1 until resultSetMetadata.getColumnCount + 1).toList.map(index => {
+                    // TODO - Consolidate later to use the SQLUtil.getResultSet
                     val dataType = resultSetMetadata.getColumnType(index)
                     val columnName = resultSetMetadata.getColumnName(index)
                     dataType match {
