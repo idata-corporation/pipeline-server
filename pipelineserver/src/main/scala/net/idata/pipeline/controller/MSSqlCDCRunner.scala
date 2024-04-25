@@ -23,14 +23,14 @@ import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.NoSQLDbUtil
 import net.idata.pipeline.common.util.aws.SecretsManagerUtil
 import net.idata.pipeline.model.CDCMessage
-import net.idata.pipeline.util.{CDCUtil, SQLUtil}
+import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, SQLUtil}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.{Connection, DriverManager}
 import scala.collection.JavaConverters._
 
-class IDataCDCRunner extends Runnable {
-    private val logger: Logger = LoggerFactory.getLogger(classOf[IDataCDCRunner])
+class MSSqlCDCRunner extends Runnable {
+    private val logger: Logger = LoggerFactory.getLogger(classOf[MSSqlCDCRunner])
 
     def run(): Unit = {
         try {
@@ -126,8 +126,15 @@ class IDataCDCRunner extends Runnable {
 
                     val cdcMessages = processTable(connection, database, schema, realTable)
 
-                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages)
-                        CDCUtil.processMessages(cdcMessages)
+                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages) {
+                        val thread = new Thread(new CDCMessagePublisher(cdcMessages))
+                        thread.start()
+                    }
+
+                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.processMessages) {
+                        val thread = new Thread(new CDCMessageProcessor(cdcMessages))
+                        thread.start()
+                    }
                 }
                 catch {
                     case e: Exception =>

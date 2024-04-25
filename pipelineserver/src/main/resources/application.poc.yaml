@@ -14,6 +14,11 @@ spring:
         enabled: "true"
       readinessState:
         enabled: "true"
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    net.idata.pipeline: DEBUG
 schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"

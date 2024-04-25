@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import net.idata.pipeline.common.model._
 import net.idata.pipeline.common.util.NotificationUtil
-import net.idata.pipeline.controller.{DebeziumCDCRunner, IDataCDCRunner}
+import net.idata.pipeline.controller.{DebeziumCDCRunner, MSSqlCDCRunner}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.{ApplicationArguments, ApplicationRunner}
@@ -228,7 +228,7 @@ class StartupRunner extends ApplicationRunner {
     }
 
     private def initIDataCDCRunner(): Unit = {
-        val thread = new Thread(new IDataCDCRunner())
+        val thread = new Thread(new MSSqlCDCRunner())
         thread.start()
     }
 }

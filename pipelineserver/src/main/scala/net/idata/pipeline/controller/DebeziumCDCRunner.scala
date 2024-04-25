@@ -22,7 +22,7 @@ import com.google.common.base.Throwables
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
-import net.idata.pipeline.util.CDCUtil
+import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, CDCUtil}
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -46,37 +46,25 @@ class DebeziumCDCRunner extends Runnable {
             val consumer: Consumer[String, String] = new KafkaConsumer[String, String](properties)
             val pattern = Pattern.compile(PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaTopic + ".*")
             consumer.subscribe(pattern)
-            val messageList = new ListBuffer[CDCMessage]()
-            var messageListSize = 0
+
             while (true) {
                 val records: ConsumerRecords[String, String] = consumer.poll(PipelineEnvironment.values.cdcConfig.debeziumConfig.kafkaTopicPollingInterval)
                 val messagesReceived: Boolean = records.count() > 0
                 if (messagesReceived)
                     logger.info("Kafka topic messages received: " + records.count().toString)
-                records.asScala.foreach(consumerRecord => {
-                    //logger.info("Message received, topic: " + consumerRecord.topic() + ", key: " + consumerRecord.key() + ", value: " + consumerRecord.value())
 
-                    val cdcMessage = parseMessage(consumerRecord.value())
-                    if (cdcMessage != null) {
-                        // Determine the size of the message
-                        val gson = new Gson()
-                        val size = gson.toJson(cdcMessage).length
+                val cdcMessages = records.asScala.map(consumerRecord => {
+                    parseMessage(consumerRecord.value())
+                }).toList
 
-                        // The message list cannot exceed 255Kb, SNS limit is 256Kb
-                        if (size + messageListSize >= (255 * 1024)) {
-                            CDCUtil.processMessages(messageList.toList)
-                            messageList.clear()
-                            messageList += cdcMessage
-                        }
-                        else
-                            messageList += cdcMessage
-                        messageListSize = messageListSize + size
-                    }
-                })
+                if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages) {
+                    val thread = new Thread(new CDCMessagePublisher(cdcMessages))
+                    thread.start()
+                }
 
-                if (messageList.nonEmpty) {
-                    CDCUtil.processMessages(messageList.toList)
-                    messageList.clear()
+                if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.processMessages) {
+                    val thread = new Thread(new CDCMessageProcessor(cdcMessages))
+                    thread.start()
                 }
             }
         } catch {
