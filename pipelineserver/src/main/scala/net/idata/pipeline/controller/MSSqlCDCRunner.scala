@@ -77,7 +77,7 @@ class MSSqlCDCRunner extends Runnable {
             sql.append("SET @to_lsn = sys.fn_cdc_get_max_lsn(); ")
             sql.append("SELECT * FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, N'all update old'); ")
             sql.append("END")
-            logger.info("CREATE OR ALTER stored proc: " + "sp_get_all_cdc_changes_" + tableWithSchema)
+            logger.debug("CREATE OR ALTER stored proc: " + "sp_get_all_cdc_changes_" + tableWithSchema)
             createStoredProc(connection, sql.toString)
 
             // create sp_get_next_lsn_as_date
@@ -90,7 +90,7 @@ class MSSqlCDCRunner extends Runnable {
             sql.append("SELECT @max_lsn = MAX(__$start_lsn) FROM cdc.fn_cdc_get_all_changes_" + tableWithSchema + " (@from_lsn, @to_lsn, 'all update old'); ")
             sql.append("SELECT sys.fn_cdc_map_lsn_to_time(@max_lsn); ")
             sql.append("END")
-            logger.info("CREATE OR ALTER stored proc: " + "sp_get_next_lsn_as_date_" + tableWithSchema)
+            logger.debug("CREATE OR ALTER stored proc: " + "sp_get_next_lsn_as_date_" + tableWithSchema)
             createStoredProc(connection, sql.toString)
         }
         catch {
@@ -215,7 +215,7 @@ class MSSqlCDCRunner extends Runnable {
                     before,
                     after
                 )
-                logger.info("CDC Message Received: " + cdcMessage.toString)
+                logger.debug("CDC Message Received: " + cdcMessage.toString)
                 Some(cdcMessage)
             }
         })

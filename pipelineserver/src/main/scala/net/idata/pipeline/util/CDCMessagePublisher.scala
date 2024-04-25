@@ -18,17 +18,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import com.google.gson.Gson
+import com.google.gson.{Gson, GsonBuilder}
+import net.idata.pipeline.common.model.PipelineEnvironment
+import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConverters._
 
 class CDCMessagePublisher(messages: List[CDCMessage]) extends Runnable {
     private val logger: Logger = LoggerFactory.getLogger(classOf[CDCMessagePublisher])
 
     def run(): Unit = {
-        logger.debug("Publishing: " + messages.size.toString + " to SNS")
+        logger.info("Number of messages received to publish to SNS: " + messages.size.toString)
 
         // Break the total size of messages to < 256Kb (SNS max) and publish each block
         val messageList = new ListBuffer[CDCMessage]()
@@ -54,7 +57,18 @@ class CDCMessagePublisher(messages: List[CDCMessage]) extends Runnable {
     }
 
     private def publish(messages: List[CDCMessage]): Unit = {
-        val thread = new Thread(new CDCMessagePublisherSlave(messages))
-        thread.start()
+        val gson = new GsonBuilder().disableHtmlEscaping().create()
+
+        // The messages are for the same database, schema, table.  Retrieve the attributes from the first message
+        val firstMessage = messages.head
+        val attributes = new java.util.HashMap[String, String]
+        attributes.put("database", firstMessage.databaseName)
+        attributes.put("schema", firstMessage.schemaName)
+        attributes.put("table", firstMessage.tableName)
+
+        // Send notification
+        logger.info("Sending message for database: " + firstMessage.databaseName + ", schema: " + firstMessage.schemaName + ", table: " + firstMessage.tableName + " to topic: " + PipelineEnvironment.values.cdcConfig.publishSNSTopicArn)
+        val cdcMessages = gson.toJson(messages.asJava)
+        NotificationUtil.addFifo(PipelineEnvironment.values.cdcConfig.publishSNSTopicArn, cdcMessages, attributes.asScala.toMap)
     }
 }
