@@ -20,13 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
-import net.idata.pipeline.common.util.NoSQLDbUtil
-import net.idata.pipeline.common.util.aws.SecretsManagerUtil
-import net.idata.pipeline.model.CDCMessage
-import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, SQLUtil}
+import net.idata.pipeline.util.CDCUtil
 import org.slf4j.{Logger, LoggerFactory}
 
-import java.sql.{Connection, DriverManager}
+import java.sql.Connection
 import scala.collection.JavaConverters._
 
 class MSSqlCDCRunner extends Runnable {
@@ -36,7 +33,7 @@ class MSSqlCDCRunner extends Runnable {
         try {
             Initialize()
 
-            while(true) {
+            while (true) {
                 processTables()
                 Thread.sleep(PipelineEnvironment.values.cdcConfig.idataCDCConfig.pollingInterval)
             }
@@ -65,7 +62,7 @@ class MSSqlCDCRunner extends Runnable {
             val realTable = array(1)
             val tableWithSchema = schema + "_" + realTable
 
-            connection = getDbConnection
+            connection = CDCUtil.getDbConnection
 
             // create sp_get_all_cdc_changes
             val sql = new StringBuilder()
@@ -98,7 +95,7 @@ class MSSqlCDCRunner extends Runnable {
                 throw e
         }
         finally {
-            if(connection != null)
+            if (connection != null)
                 connection.close()
         }
     }
@@ -109,171 +106,12 @@ class MSSqlCDCRunner extends Runnable {
     }
 
     private def processTables(): Unit = {
-        var connection: Connection = null
+        val tables = PipelineEnvironment.values.cdcConfig.idataCDCConfig.includeTables.asScala.toList
 
-        try {
-            connection = getDbConnection
-
-            val database = PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseName
-            val tables = PipelineEnvironment.values.cdcConfig.idataCDCConfig.includeTables.asScala.toList
-
-            tables.foreach(table => {
-                try {
-                    // Determine the schema name and real table name - table name is formatted as 'schema.table'
-                    val array = table.split("\\.")
-                    val schema = array(0)
-                    val realTable = array(1)
-
-                    val cdcMessages = processTable(connection, database, schema, realTable)
-
-                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages) {
-                        val thread = new Thread(new CDCMessagePublisher(cdcMessages))
-                        thread.start()
-                    }
-
-                    if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.processMessages) {
-                        val thread = new Thread(new CDCMessageProcessor(cdcMessages))
-                        thread.start()
-                    }
-                }
-                catch {
-                    case e: Exception =>
-                        logger.error("Pipeline IDataCDCRunner:processTables error: " + Throwables.getStackTraceAsString(e))
-                }
-            })
-        }
-        finally {
-            if(connection != null)
-                connection.close()
-        }
-    }
-
-    private def processTable(connection: Connection, database: String, schema: String, table: String): List[CDCMessage] = {
-        val tableWithSchema = schema + "_" + table
-        val storedProcedure = "EXEC " + "dbo.sp_get_all_cdc_changes_" + tableWithSchema + " ?"
-        val callableStatement = connection.prepareCall(storedProcedure)
-
-        // Set the start date parameter
-        val startDate = getLSNForProc(database, tableWithSchema)
-        callableStatement.setString(1, startDate)
-
-        // Execute the stored proc
-        callableStatement.execute()
-        val resultSet = callableStatement.getResultSet
-
-        // Convert to CDCMessages
-        val results = SQLUtil.getResultSet(resultSet)
-        val messages = results.flatMap(result => {
-            val operation = result.get("__$operation").orNull
-            if(operation == null)
-                throw new PipelineException("Internal error: CDC value does not have an '__$operation' column")
-
-            val (isBeforeUpdate, isAfterUpdate, isInsert, isDelete) = {
-                if(operation.toInt == 4)
-                    (false, true, false, false)
-                else if(operation.toInt == 3)
-                     (true, false, false, false)
-                 else if(operation.toInt == 2)
-                     (false, false, true, false)
-                 else if(operation.toInt == 1)
-                     (false, false, false, true)
-                 else
-                     throw new PipelineException("Internal CDC error, invalid operation value received: " + operation + " for table: " + tableWithSchema)
-            }
-
-            if(isAfterUpdate)
-                None  // Ignore the 'after' values, already taken care of with the 'isBeforeUpdate'
-            else {
-                val (before, after) = {
-                    // Filter out the system fields
-                    val data = result.filterNot(_._1.startsWith("__$"))
-
-                    if(isBeforeUpdate) {
-                        // The current record is the 'before'
-                        val before = data
-
-                        // Find the 'after' record
-                        val seqval = result.get("__$seqval").orNull
-                        val after = findAfter(seqval, results)
-                        (before.asJava, after.asJava)
-                    }
-                    else {
-                        if(isInsert)
-                            (null, data.asJava)
-                        else
-                            (data.asJava, null)
-                    }
-                }
-
-                val cdcMessage = CDCMessage(
-                    database,
-                    schema,
-                    table,
-                    isInsert,
-                    isBeforeUpdate,
-                    isDelete,
-                    before,
-                    after
-                )
-                logger.debug("CDC Message Received: " + cdcMessage.toString)
-                Some(cdcMessage)
-            }
+        // Start a separate thread to process each table
+        tables.foreach(table => {
+            val thread = new Thread(new MsSqlCDCRunnerSlave(table))
+            thread.start()
         })
-
-        storeNextLSNForProc(connection, database, tableWithSchema)
-
-        messages
-    }
-
-    private def findAfter(seqval: String, results: List[Map[String, String]]): Map[String, String] = {
-        // In the result set, find the 'after' value with a matching 'seqval' and operation of 4
-        val after = results.flatMap(r => {
-            if(r.getOrElse("__$seqval", "").compareTo(seqval) == 0 && r.getOrElse("__$operation", "").compareTo("4").toInt == 0)
-                Some(r)
-            else
-                None
-        }).flatten.toMap
-
-        // Filter out the system fields
-        after.filterNot(_._1.startsWith("__$"))
-    }
-
-    private def getLSNForProc(database: String, table: String): String = {
-        val key = database + "." + table
-        val value = NoSQLDbUtil.getItemJSON(PipelineEnvironment.values.cdcConfig.idataCDCConfig.lastReadTableName, "name", key, "value").orNull
-        if(value == null)
-            "2008-01-01T12:00:00.000"   // If it does not exist, use a back date, when CDC was implemented in MSSQL Server
-        else
-            value.replace("\"", "")
-    }
-
-    private def storeNextLSNForProc(connection: Connection, database: String, table: String): Unit = {
-        val key = database + "." + table
-
-        // Otherwise, use the proc to get the date
-        val storedProcedure = "EXEC " + "dbo.sp_get_next_lsn_as_date_" + table
-        val callableStatement = connection.prepareCall(storedProcedure)
-
-        // Execute the stored proc
-        callableStatement.execute()
-        val resultSet = callableStatement.getResultSet
-        if(!resultSet.next())
-            throw new PipelineException("Internal error, the stored procedure: " + storedProcedure + " did not return a value")
-        val date = resultSet.getString(1)
-
-        // Store the date
-        if(date != null)
-            NoSQLDbUtil.setItemNameValue(PipelineEnvironment.values.cdcConfig.idataCDCConfig.lastReadTableName, "name", key, "value", date)
-    }
-
-    private def getDbConnection: Connection = {
-        val secrets = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName)
-            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName))
-        val username = secrets.get("username")
-        val password = secrets.get("password")
-        val jdbcUrl = secrets.get("jdbcUrl")
-
-        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
-        DriverManager.getConnection(jdbcUrl, username, password)
     }
 }

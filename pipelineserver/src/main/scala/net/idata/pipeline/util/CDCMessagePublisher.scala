@@ -24,8 +24,8 @@ import net.idata.pipeline.common.util.NotificationUtil
 import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 class CDCMessagePublisher(messages: List[CDCMessage]) extends Runnable {
     private val logger: Logger = LoggerFactory.getLogger(classOf[CDCMessagePublisher])

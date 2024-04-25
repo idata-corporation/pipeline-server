@@ -18,17 +18,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment}
+import net.idata.pipeline.common.model.{DatasetConfig, PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.ObjectStoreUtil
+import net.idata.pipeline.common.util.aws.SecretsManagerUtil
 import net.idata.pipeline.model.CDCMessage
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.sql.{Connection, DriverManager}
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.collection.JavaConverters._
 
 object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
+
+    def getDbConnection: Connection = {
+        val secrets = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName)
+            .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName))
+        val username = secrets.get("username")
+        val password = secrets.get("password")
+        val jdbcUrl = secrets.get("jdbcUrl")
+
+        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
+        DriverManager.getConnection(jdbcUrl, username, password)
+    }
 
     def insertCreateSQL(config: DatasetConfig, message: CDCMessage): String = {
         val sql = new StringBuilder()
