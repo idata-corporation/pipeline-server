@@ -22,7 +22,7 @@ import com.google.common.base.Throwables
 import com.google.gson.Gson
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.model.{CDCMessage, DebeziumMessage}
-import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, CDCUtil}
+import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher}
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -30,7 +30,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.util.Properties
 import java.util.regex.Pattern
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 
 class DebeziumCDCRunner extends Runnable {
     private val logger: Logger = LoggerFactory.getLogger(classOf[DebeziumCDCRunner])
