@@ -32,7 +32,7 @@ import scala.collection.JavaConverters._
 object CDCUtil {
     private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-    def getDbConnection: Connection = {
+    def getSourceDbConnection: Connection = {
         val secrets = SecretsManagerUtil.getSecretMap(PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName)
             .getOrElse(throw new PipelineException("Could not retrieve database information from Secrets Manager, secret name: " + PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseSecretName))
         val username = secrets.get("username")

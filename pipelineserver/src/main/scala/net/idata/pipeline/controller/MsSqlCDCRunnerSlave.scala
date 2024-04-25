@@ -35,7 +35,7 @@ class MsSqlCDCRunnerSlave(table: String) extends Runnable {
         var connection: Connection = null
 
         try {
-            connection = CDCUtil.getDbConnection
+            connection = CDCUtil.getSourceDbConnection
 
             val database = PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseName
 

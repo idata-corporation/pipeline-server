@@ -62,7 +62,7 @@ class MSSqlCDCRunner extends Runnable {
             val realTable = array(1)
             val tableWithSchema = schema + "_" + realTable
 
-            connection = CDCUtil.getDbConnection
+            connection = CDCUtil.getSourceDbConnection
 
             // create sp_get_all_cdc_changes
             val sql = new StringBuilder()
