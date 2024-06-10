@@ -162,7 +162,7 @@ class StatusUtil {
                 else if (status.processName.compareToIgnoreCase("RedshiftLoader") == 0
                     && status.state.compareToIgnoreCase("end") == 0)
                     false
-                else if (status.processName.compareToIgnoreCase("Trigger") == 0
+                else if (status.processName.compareToIgnoreCase("PostgresLoader") == 0
                     && status.state.compareToIgnoreCase("end") == 0)
                     false
                 else

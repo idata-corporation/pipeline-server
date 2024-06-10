@@ -18,7 +18,7 @@ logging:
   level:
     root: INFO
     org.springframework.web: INFO
-    net.idata.pipeline: DEBUG
+    net.idata.pipeline: INFO
 schedule:
   checkFileNotifierQueue: "5000"
   findJobsToStart: "5000"
