@@ -20,11 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import com.google.common.base.Throwables
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
-import net.idata.pipeline.util.CDCUtil
+import net.idata.pipeline.model.CDCMessage
+import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, CDCUtil}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.Connection
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.util.{Failure, Success}
 
 class MSSqlCDCRunner extends Runnable {
     private val logger: Logger = LoggerFactory.getLogger(classOf[MSSqlCDCRunner])
@@ -89,6 +93,15 @@ class MSSqlCDCRunner extends Runnable {
             sql.append("END")
             logger.debug("CREATE OR ALTER stored proc: " + "sp_get_next_lsn_as_date_" + tableWithSchema)
             createStoredProc(connection, sql.toString)
+
+            // create sp_convert_lsn_to_time
+            sql.clear()
+            sql.append("CREATE OR ALTER PROCEDURE sp_convert_lsn_to_time ")
+            sql.append("(@lsn binary(10)) AS BEGIN ")
+            sql.append("SELECT sys.fn_cdc_map_lsn_to_time(@lsn) ")
+            sql.append("END")
+            logger.debug("CREATE OR ALTER stored proc: " + "sp_convert_lsn_to_time")
+            createStoredProc(connection, sql.toString)
         }
         catch {
             case e: Exception =>
@@ -108,10 +121,48 @@ class MSSqlCDCRunner extends Runnable {
     private def processTables(): Unit = {
         val tables = PipelineEnvironment.values.cdcConfig.idataCDCConfig.includeTables.asScala.toList
 
-        // Start a separate thread to process each table
-        tables.foreach(table => {
-            val thread = new Thread(new MsSqlCDCRunnerSlave(table))
-            thread.start()
-        })
+        var connection: Connection = null
+
+        try {
+            connection = CDCUtil.getSourceDbConnection
+            val database = PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseName
+
+            val f: Future[List[CDCMessage]] = Future {
+                tables.flatMap(table => {
+                    // Determine the schema name and real table name - table name is formatted as 'schema.table'
+                    val array = table.split("\\.")
+                    val schema = array(0)
+                    val realTable = array(1)
+
+                    new MsSqlCDCRunnerSlave().processTable(connection, database, schema, realTable)
+                })
+            }
+
+            f.onComplete {
+                case Success(cdcMessages) =>
+                    // TODO - Order the messages by LSN
+
+
+                    if (cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages) {
+                        val thread = new Thread(new CDCMessagePublisher(cdcMessages))
+                        thread.start()
+                    }
+                    if (cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.processMessages) {
+                        val thread = new Thread(new CDCMessageProcessor(cdcMessages))
+                        thread.start()
+                    }
+
+                case Failure(e) =>
+                    throw new Exception(Throwables.getStackTraceAsString(e))
+            }
+        }
+        catch {
+            case e: Exception =>
+                logger.error("Pipeline MsSqlCDCRunner:processTables error: " + Throwables.getStackTraceAsString(e))
+        }
+        finally {
+            if(connection != null)
+                connection.close()
+        }
     }
 }

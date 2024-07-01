@@ -18,57 +18,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import com.google.common.base.Throwables
 import net.idata.pipeline.common.model.{PipelineEnvironment, PipelineException}
 import net.idata.pipeline.common.util.NoSQLDbUtil
 import net.idata.pipeline.model.CDCMessage
-import net.idata.pipeline.util.{CDCMessageProcessor, CDCMessagePublisher, CDCUtil, SQLUtil}
+import net.idata.pipeline.util.SQLUtil
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.sql.Connection
 import scala.collection.JavaConverters._
 
-class MsSqlCDCRunnerSlave(table: String) extends Runnable {
+class MsSqlCDCRunnerSlave  {
     private val logger: Logger = LoggerFactory.getLogger(classOf[MsSqlCDCRunnerSlave])
 
-    def run(): Unit = {
-        var connection: Connection = null
-
-        try {
-            connection = CDCUtil.getSourceDbConnection
-
-            val database = PipelineEnvironment.values.cdcConfig.idataCDCConfig.databaseName
-
-            try {
-                // Determine the schema name and real table name - table name is formatted as 'schema.table'
-                val array = table.split("\\.")
-                val schema = array(0)
-                val realTable = array(1)
-
-                val cdcMessages = processTable(connection, database, schema, realTable)
-
-                if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.publishMessages) {
-                    val thread = new Thread(new CDCMessagePublisher(cdcMessages))
-                    thread.start()
-                }
-
-                if(cdcMessages.nonEmpty && PipelineEnvironment.values.cdcConfig.processMessages) {
-                    val thread = new Thread(new CDCMessageProcessor(cdcMessages))
-                    thread.start()
-                }
-            }
-            catch {
-                case e: Exception =>
-                    logger.error("Pipeline MsSqlCDCRunnerSlave:run error: " + Throwables.getStackTraceAsString(e))
-            }
-        }
-        finally {
-            if(connection != null)
-                connection.close()
-        }
-    }
-
-    private def processTable(connection: Connection, database: String, schema: String, table: String): List[CDCMessage] = {
+    def processTable(connection: Connection, database: String, schema: String, table: String): List[CDCMessage] = {
         val tableWithSchema = schema + "_" + table
         val storedProcedure = "EXEC " + "dbo.sp_get_all_cdc_changes_" + tableWithSchema + " ?"
         val callableStatement = connection.prepareCall(storedProcedure)
@@ -84,6 +46,8 @@ class MsSqlCDCRunnerSlave(table: String) extends Runnable {
         // Convert to CDCMessages
         val results = SQLUtil.getResultSet(resultSet)
         val messages = results.flatMap(result => {
+            val startLSN = result.get("__$start_lsn").orNull
+
             val operation = result.get("__$operation").orNull
             if(operation == null)
                 throw new PipelineException("Internal error: CDC value does not have an '__$operation' column")
@@ -126,6 +90,7 @@ class MsSqlCDCRunnerSlave(table: String) extends Runnable {
                 }
 
                 val cdcMessage = CDCMessage(
+                    startLSN,
                     database,
                     schema,
                     table,
@@ -165,6 +130,10 @@ class MsSqlCDCRunnerSlave(table: String) extends Runnable {
             "2008-01-01T12:00:00.000"   // If it does not exist, use a back date, when CDC was implemented in MSSQL Server
         else
             value.replace("\"", "")
+    }
+
+    private def convertLSNtoTimeMillis(connection: Connection, lsn: String): Long = {
+
     }
 
     private def storeNextLSNForProc(connection: Connection, database: String, table: String): Unit = {

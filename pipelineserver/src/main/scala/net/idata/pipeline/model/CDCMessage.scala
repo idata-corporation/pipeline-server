@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 case class CDCMessage(
+                         startLSN: String,
                          databaseName: String,
                          schemaName: String,
                          tableName: String,
